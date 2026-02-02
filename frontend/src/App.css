@@ -1,0 +1,197 @@
+html {
+  scroll-behavior: auto; /* or just remove scroll-behavior */
+}
+
+.great-vibes-regular {
+  font-family: 'Great Vibes', cursive;
+}
+
+.archivo-black-regular {
+  font-family: "Archivo Black", sans-serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.carter-one-regular {
+  font-family: "Carter One", system-ui;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.tapestry-regular {
+  font-family: "Tapestry", serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.bebas-neue-regular {
+  font-family: "Bebas Neue", sans-serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+
+
+.playwrite-mx-guides-regular {
+    font-family: "Playwrite MX Guides", cursive;
+    font-weight: 400;
+    font-style: normal;
+  }
+  
+  body {
+    overflow-x: hidden;
+  }
+  .archivo-black-regular {
+  font-family: "Archivo Black", sans-serif;
+  font-weight: 400;
+  font-style: normal;
+}
+.anton-regular {
+  font-family: "Anton", sans-serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+
+@keyframes scrollVideos {
+  0% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-scrollVideos {
+  animation: scrollVideos 40s linear infinite;
+}
+
+.pause-scroll {
+  animation-play-state: paused !important;
+}
+
+
+.perspective {
+  perspective: 1000px;
+}
+
+.transform-style {
+  transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+}
+
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+
+.card-animated-border {
+  position: relative;
+  border-radius: 1rem;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.card-animated-border::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: -6px;
+  right: -6px;
+  bottom: -6px;
+  background: conic-gradient(
+    from 0deg,
+    #170007 0deg,
+    #170007 90deg,
+    transparent 90deg,
+    transparent 360deg
+  );
+  animation: spin 2s linear infinite;
+  z-index: 1;
+  border-radius: 1.5rem;
+  pointer-events: none;
+  filter: brightness(1.5) saturate(2);
+}
+
+.card-animated-border > * {
+  position: relative;
+  z-index: 2;
+  border-radius: 1rem;
+  background: #1e1e1e;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+
+@keyframes slideUp {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-fade {
+  animation: fadeIn 1s ease-in-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.7s ease-in-out both;
+}
+
+.delay-200 {
+  animation-delay: 0.2s;
+}
+
+
+.ruthie-regular {
+  font-family: "Ruthie", cursive;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.great-vibes-regular {
+  font-family: "Great Vibes", cursive;
+  font-weight: 400;
+  font-style: normal;
+}
+
+
+no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE & Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+
+
+@keyframes scrollImages {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.animate-scrollImages {
+  animation: scrollImages 30s linear infinite;
+}
+
+.group-hover\:pause-scroll:hover {
+  animation-play-state: paused;
+}

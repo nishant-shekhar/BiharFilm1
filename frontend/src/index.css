@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Doodle background with low opacity + fade and blur on all sides */
+.cinema-doodle-bg {
+  background-image: url('/doodles.jpg');
+  /* update path if needed */
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: contain;
+  /* or cover if you want it to fill */
+  opacity: 0.18;
+  /* global low opacity */
+  filter: blur(1.5px);
+
+  /* Soft fade-out from all four sides */
+  -webkit-mask-image: radial-gradient(circle at center, black 45%, transparent 100%);
+  mask-image: radial-gradient(circle at center, black 45%, transparent 100%);
+
+  /* Make mask cover the whole element */
+  -webkit-mask-size: cover;
+  mask-size: cover;
+
+  /* Optional: slightly stronger fade at the bottom side */
+  /* Uncomment if you want extra fade at bottom
+  -webkit-mask-image:
+    radial-gradient(circle at center, black 45%, transparent 100%),
+    linear-gradient(to bottom, black 0%, black 60%, transparent 100%);
+  mask-image:
+    radial-gradient(circle at center, black 45%, transparent 100%),
+    linear-gradient(to bottom, black 0%, black 60%, transparent 100%);
+  -webkit-mask-composite: intersect;
+  mask-composite: intersect;
+  */
+}
+
+
+@keyframes dropdown-fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-dropdown-fade {
+  animation: dropdown-fade-in 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
