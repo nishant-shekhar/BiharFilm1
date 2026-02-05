@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { CheckCircle2, XCircle } from "lucide-react";
+import UniversalPreviewModal from "./UniversalPreviewModal";
 
 /* =======================
    REGEX RULES
@@ -225,15 +226,19 @@ export default function Annexure2Form({ activeApplication, onSubmit }) {
     }
   };
 
-  const submitFinal = async (data) => {
+  const [showPreview, setShowPreview] = useState(false);
+
+  const handlePreview = () => {
     // 1. Validate Pre-conditions
     if (!activeApplication || !activeApplication.id) {
-      alert(
-        "No active application found. Please create an application via the 'NOC Forms' menu first.",
-      );
+      alert("No active application found.");
       return;
     }
+    setShowPreview(true);
+  };
 
+  const submitFinal = async () => {
+    const data = getValues();
     setIsSubmitting(true);
     try {
       const formData = new FormData();
@@ -265,18 +270,6 @@ export default function Annexure2Form({ activeApplication, onSubmit }) {
       formData.append("emailOfApplicant", data.applicantEmail);
 
       // Shooting Details
-      // Note: The form has 'synopsis' (Project Info), but backend asks for 'briefSynopsis' under Shooting Details?
-      // Assuming 'synopsis' covers the Project Info synopsis.
-      // If there is another synopsis field, we'd map it.
-      // Based on schema, 'synopsis' is likely the main one.
-      // Backend requirement list in prompt lists "briefSynopsis" under Shooting Details.
-      // But the form schema step 1 has "synopsis".
-      // I will map form's 'synopsis' to 'briefSynopsis' as well if required, or just send it as 'synopsis'.
-      // Re-reading prompt: "Shooting Details -> briefSynopsis". "Project Information -> synopsis".
-      // The form only has one synopsis in Step 1. I will map it to 'synopsis' as per Project Info.
-      // Wait, the prompt lists 'briefSynopsis' as REQUIRED under Shooting Details.
-      // I will duplicate the synopsis or use 'otherDetails' if that's what was intended.
-      // For now, I will append 'briefSynopsis' with the same value as 'synopsis' to be safe.
       formData.append("briefSynopsis", data.synopsis);
 
       formData.append("mainArtistsAtLocation", data.mainArtists);
@@ -314,8 +307,7 @@ export default function Annexure2Form({ activeApplication, onSubmit }) {
         );
       if (data.contactInCharge)
         formData.append("siteContactPersonDetails", data.contactInCharge);
-      // data.brandingDetails - Backend list doesn't explicitly show a key, maybe 'otherDetails'?
-      // I'll append it to otherDetails if present.
+
       if (data.brandingDetails) {
         const existingOther = formData.get("otherDetails") || "";
         formData.set(
@@ -374,9 +366,10 @@ export default function Annexure2Form({ activeApplication, onSubmit }) {
       if (response.data.success) {
         alert("NOC Form Submitted Successfully!");
         if (onSubmit) onSubmit(); // Trigger dashboard refresh
-        // Optionally navigate or reset
+        setShowPreview(false);
       } else {
         alert(response.data.message || "Submission failed.");
+        setShowPreview(false);
       }
     } catch (error) {
       console.error("Submission Error:", error);
@@ -391,6 +384,7 @@ export default function Annexure2Form({ activeApplication, onSubmit }) {
         }
       }
       alert(msg);
+      setShowPreview(false);
     } finally {
       setIsSubmitting(false);
     }
@@ -732,7 +726,7 @@ export default function Annexure2Form({ activeApplication, onSubmit }) {
             </button>
           ) : (
             <button
-              onClick={handleSubmit(submitFinal, onError)}
+              onClick={handleSubmit(handlePreview, onError)}
               className="px-8 py-3 bg-[#891737] text-white rounded-lg hover:bg-[#70122d] transition-all duration-300 font-medium shadow-md hover:shadow-lg flex items-center gap-2 min-w-[200px] justify-center disabled:opacity-70 disabled:cursor-not-allowed"
               disabled={isSubmitting}
             >

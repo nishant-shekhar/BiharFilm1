@@ -1,84 +1,15 @@
 import React from "react";
-import { CheckCircle2, Clock, Send, XCircle, FileCheck, AlertCircle } from "lucide-react";
+import {
+  CheckCircle2,
+  Clock,
+  Send,
+  XCircle,
+  FileCheck,
+  AlertCircle,
+} from "lucide-react";
 
 const NOCTimeline = ({ nocForm }) => {
-  // Timeline steps based on status
-  const getTimelineSteps = () => {
-    const steps = [
-      {
-        id: 1,
-        title: "Application Submitted",
-        description: "Your NOC form has been submitted successfully",
-        date: nocForm.createdAt,
-        status: "completed",
-        icon: FileCheck,
-      },
-      {
-        id: 2,
-        title: "Under Review",
-        description: nocForm.adminActionBy
-          ? `Reviewed by ${nocForm.adminActionBy}`
-          : "Admin is reviewing your application",
-        date: nocForm.status === "under_review" ? nocForm.adminActionAt : null,
-        status: nocForm.status === "submitted" ? "pending" : "completed",
-        icon: Clock,
-        remarks: nocForm.adminRemarks
-      },
-      {
-        id: 3,
-        title: "Forwarded to District",
-        description: nocForm.forwardedToDistricts?.length > 0
-          ? `Forwarded to ${nocForm.forwardedToDistricts.map(d => d.districtName).join(", ")}`
-          : "Forwarding to district administration",
-        date: nocForm.forwardedAt,
-        status: nocForm.status === "forwarded" || nocForm.status === "approved" || nocForm.status === "rejected"
-          ? "completed"
-          : nocForm.status === "under_review" ? "current" : "pending",
-        icon: Send,
-        showDepartments: true
-      }
-    ];
-
-    // Final step - Approved or Rejected
-    if (nocForm.status === "approved") {
-      steps.push({
-        id: 4,
-        title: "Approved by District Admin",
-        description: nocForm.districtActionBy
-          ? `Approved by ${nocForm.districtActionBy}`
-          : "Your application has been approved",
-        date: nocForm.districtActionAt,
-        status: "completed",
-        icon: CheckCircle2,
-        remarks: nocForm.districtRemarks
-      });
-    } else if (nocForm.status === "rejected") {
-      steps.push({
-        id: 4,
-        title: "Application Rejected",
-        description: nocForm.districtActionBy
-          ? `Rejected by ${nocForm.districtActionBy}`
-          : "Your application has been rejected",
-        date: nocForm.districtActionAt || nocForm.rejectedAt,
-        status: "rejected",
-        icon: XCircle,
-        remarks: nocForm.districtRemarks || nocForm.adminRemarks
-      });
-    } else if (nocForm.status === "forwarded") {
-      steps.push({
-        id: 4,
-        title: "Awaiting District Decision",
-        description: "District admin is reviewing your application",
-        date: null,
-        status: "current",
-        icon: Clock,
-      });
-    }
-
-    return steps;
-  };
-
-  const timelineSteps = getTimelineSteps();
+  if (!nocForm) return null;
 
   const formatDate = (dateString) => {
     if (!dateString) return null;
@@ -87,162 +18,182 @@ const NOCTimeline = ({ nocForm }) => {
       month: "short",
       year: "numeric",
       hour: "2-digit",
-      minute: "2-digit"
+      minute: "2-digit",
     });
   };
 
   const getStatusStyles = (status) => {
-    switch (status) {
-      case "completed":
+    switch (status?.toUpperCase()) {
+      case "ACCEPTED":
+      case "APPROVED":
         return {
-          circle: "bg-black border-black",
-          icon: "text-white"
+          circle: "bg-green-600 border-green-600",
+          icon: "text-white",
+          text: "text-green-700",
         };
-      case "current":
+      case "REJECTED":
+      case "DECLINED":
         return {
-          circle: "bg-gray-900 border-gray-900",
-          icon: "text-white"
+          circle: "bg-red-600 border-red-600",
+          icon: "text-white",
+          text: "text-red-700",
         };
-      case "rejected":
+      case "FORWARDED":
         return {
-          circle: "bg-gray-400 border-gray-400",
-          icon: "text-white"
+          circle: "bg-blue-600 border-blue-600",
+          icon: "text-white",
+          text: "text-blue-700",
         };
-      case "pending":
+      case "SUBMITTED":
         return {
-          circle: "bg-white border-gray-300",
-          icon: "text-gray-400"
+          circle: "bg-purple-600 border-purple-600",
+          icon: "text-white",
+          text: "text-purple-700",
         };
       default:
         return {
-          circle: "bg-white border-gray-300",
-          icon: "text-gray-400"
+          circle: "bg-gray-200 border-gray-300",
+          icon: "text-gray-400",
+          text: "text-gray-500",
         };
     }
   };
 
+  // Generate timeline nodes
+  const generateNodes = () => {
+    const nodes = [];
+
+    // 1. Submission Node
+    nodes.push({
+      id: "submission",
+      title: "Application Submitted",
+      description: "Initial application received and recorded in system.",
+      date: nocForm.createdAt,
+      status: "SUBMITTED",
+      icon: FileCheck,
+    });
+
+    // 2. Permission Requests Nodes
+    if (nocForm.permissionRequests && nocForm.permissionRequests.length > 0) {
+      // Sort by date to show sequence
+      const sortedRequests = [...nocForm.permissionRequests].sort((a, b) => {
+        const dateA = a.decidedAt || a.forwardedAt;
+        const dateB = b.decidedAt || b.forwardedAt;
+        return new Date(dateA) - new Date(dateB);
+      });
+
+      sortedRequests.forEach((req) => {
+        // If not decided yet, it's a "Forwarded" step
+        if (req.status === "FORWARDED") {
+          nodes.push({
+            id: `forward-${req.id}`,
+            title: `Forwarded to ${req.officeName}`,
+            description: `Sent for departmental clearance to ${req.officeType.toLowerCase()} office.`,
+            date: req.forwardedAt,
+            status: "FORWARDED",
+            icon: Send,
+          });
+        } else {
+          // It's a decision node
+          nodes.push({
+            id: `decision-${req.id}`,
+            title: `${req.status === "ACCEPTED" ? "Approved" : "Rejected"} by ${req.officeName}`,
+            description:
+              req.remarks ||
+              `Decision rendered by ${req.officeName} administration.`,
+            date: req.decidedAt,
+            status: req.status,
+            icon: req.status === "ACCEPTED" ? CheckCircle2 : XCircle,
+            remarks: req.remarks,
+          });
+        }
+      });
+    }
+
+    // 3. Final Approval Node
+    if (
+      nocForm.finalApproval?.completed &&
+      nocForm.finalApproval?.isApproved &&
+      nocForm.finalApproval?.status === "APPROVED"
+    ) {
+      nodes.push({
+        id: "final-approval",
+        title: "Final Approval Grant",
+        description: "Competent Authority has granted final approval.",
+        date: nocForm.finalApproval.approvedAt || new Date().toISOString(), // Fallback if no date provided
+        status: "APPROVED",
+        icon: CheckCircle2,
+      });
+    }
+
+    return nodes;
+  };
+
+  const nodes = generateNodes();
+
   return (
-    <div className="bg-white border border-gray-200">
-      {/* Header */}
-      <div className="px-6 py-4 border-b border-gray-200">
-        <h3 className="text-base font-semibold text-gray-900">Application Timeline</h3>
-      </div>
+    <div className="p-6">
+      <div className="relative">
+        {nodes.map((node, index) => {
+          const Icon = node.icon;
+          const styles = getStatusStyles(node.status);
+          const isLast = index === nodes.length - 1;
 
-      {/* Timeline */}
-      <div className="px-6 py-5">
-        <div className="relative">
-          {timelineSteps.map((step, index) => {
-            const Icon = step.icon;
-            const isLast = index === timelineSteps.length - 1;
-            const styles = getStatusStyles(step.status);
+          return (
+            <div key={node.id} className="relative pb-8 last:pb-0">
+              {/* Connector Line */}
+              {!isLast && (
+                <div className="absolute left-[15px] top-[30px] w-[2px] h-[calc(100%-20px)] bg-gray-100"></div>
+              )}
 
-            return (
-              <div key={step.id} className="relative pb-6 last:pb-0">
-                {/* Vertical Line */}
-                {!isLast && (
-                  <div
-                    className={`absolute left-4 top-10 w-px h-[calc(100%-2.5rem)] ${step.status === "completed" ? "bg-black" : "bg-gray-300"
-                      }`}
-                  ></div>
-                )}
+              {/* Node Content */}
+              <div className="flex gap-4">
+                {/* Icon Circle */}
+                <div
+                  className={`relative z-10 w-8 h-8 rounded-lg border-2 flex items-center justify-center shrink-0 ${styles.circle} shadow-sm`}
+                >
+                  <Icon size={14} className={styles.icon} strokeWidth={3} />
+                </div>
 
-                {/* Timeline Item */}
-                <div className="flex gap-4">
-                  {/* Icon Circle */}
-                  <div
-                    className={`relative z-10 flex-shrink-0 w-8 h-8 rounded-full border flex items-center justify-center ${styles.circle}`}
-                  >
-                    <Icon size={14} className={styles.icon} strokeWidth={2.5} />
-                  </div>
-
-                  {/* Content */}
-                  <div className="flex-1 pt-0.5 min-w-0">
-                    {/* Header */}
-                    <div className="flex items-start justify-between gap-3 mb-1">
-                      <h4 className="text-sm font-semibold text-gray-900">
-                        {step.title}
-                      </h4>
-
-                      {/* Status Badge */}
-                      {step.status === "current" && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-900 text-white text-[10px] font-medium uppercase tracking-wide whitespace-nowrap">
-                          Active
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Date */}
-                    {step.date && (
-                      <span className="text-[11px] text-gray-500 font-medium block mb-2">
-                        {formatDate(step.date)}
+                {/* Text Content */}
+                <div className="flex-1 pt-0.5">
+                  <div className="flex justify-between items-start gap-2 mb-1">
+                    <h4 className="text-xs font-bold text-gray-900 uppercase tracking-tight">
+                      {node.title}
+                    </h4>
+                    {node.date && (
+                      <span className="text-[9px] font-bold text-gray-300 uppercase tracking-widest whitespace-nowrap">
+                        {new Date(node.date).toLocaleDateString("en-GB", {
+                          day: "2-digit",
+                          month: "short",
+                        })}
                       </span>
                     )}
-
-                    {/* Description */}
-                    <p className="text-xs text-gray-600 leading-relaxed mb-3">
-                      {step.description}
-                    </p>
-
-                    {/* Forwarded Districts */}
-                    {step.showDepartments && nocForm.forwardedToDistricts?.length > 0 && (
-                      <div className="mb-3">
-                        <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-1.5">
-                          Forwarded Districts
-                        </p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {nocForm.forwardedToDistricts.map((district, idx) => (
-                            <span
-                              key={idx}
-                              className="px-2 py-1 bg-gray-100 text-gray-700 text-[11px] font-medium border border-gray-200"
-                            >
-                              {district.districtName}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Forwarded Departments */}
-                    {step.showDepartments && nocForm.forwardedToDepartments?.length > 0 && (
-                      <div className="mb-3">
-                        <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wide mb-1.5">
-                          Forwarded Departments
-                        </p>
-                        <div className="flex flex-wrap gap-1.5">
-                          {nocForm.forwardedToDepartments.map((dept, idx) => (
-                            <span
-                              key={idx}
-                              className="px-2 py-1 bg-gray-100 text-gray-700 text-[11px] font-medium border border-gray-200"
-                            >
-                              {dept.departmentName}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Remarks */}
-                    {step.remarks && (
-                      <div className="bg-gray-50 border border-gray-200 p-3">
-                        <div className="flex gap-2">
-                          <AlertCircle size={14} className="text-gray-600 flex-shrink-0 mt-0.5" />
-                          <div className="flex-1 min-w-0">
-                            <p className="text-[10px] font-semibold text-gray-900 uppercase tracking-wide mb-1">
-                              Remarks
-                            </p>
-                            <p className="text-xs text-gray-700 leading-relaxed">
-                              {step.remarks}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    )}
                   </div>
+
+                  <p className="text-[11px] text-gray-500 font-medium leading-relaxed mb-2">
+                    {node.description}
+                  </p>
+
+                  {node.date && (
+                    <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                      {new Date(node.date).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </div>
+                  )}
+
+                  {node.remarks && (
+                    <div className="mt-2 p-2 bg-gray-50 border-l-2 border-gray-200 rounded text-[10px] italic text-gray-600">
+                      "{node.remarks}"
+                    </div>
+                  )}
                 </div>
               </div>
-            );
-          })}
-        </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

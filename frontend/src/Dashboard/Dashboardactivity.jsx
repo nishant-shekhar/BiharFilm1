@@ -13,94 +13,123 @@ import {
 import UniversalFormModal from "./UniversalFormModal";
 
 // --- DATA CONSTANTS (With IDs for API) ---
-const DISTRICTS_LIST = [
-  { id: 1, name: "Araria" },
-  { id: 2, name: "Arwal" },
-  { id: 3, name: "Aurangabad" },
-  { id: 4, name: "Banka" },
-  { id: 5, name: "Begusarai" },
-  { id: 6, name: "Bhagalpur" },
-  { id: 7, name: "Bhojpur" },
-  { id: 8, name: "Buxar" },
-  { id: 9, name: "Darbhanga" },
-  { id: 10, name: "East Champaran" },
-  { id: 11, name: "Gaya" },
-  { id: 12, name: "Gopalganj" },
-  { id: 13, name: "Jamui" },
-  { id: 14, name: "Jehanabad" },
-  { id: 15, name: "Kaimur" },
-  { id: 16, name: "Katihar" },
-  { id: 17, name: "Khagaria" },
-  { id: 18, name: "Kishanganj" },
-  { id: 19, name: "Lakhisarai" },
-  { id: 20, name: "Madhepura" },
-  { id: 21, name: "Madhubani" },
-  { id: 22, name: "Munger" },
-  { id: 23, name: "Muzaffarpur" },
-  { id: 24, name: "Nalanda" },
-  { id: 25, name: "Nawada" },
-  { id: 26, name: "Patna" },
-  { id: 27, name: "Purnia" },
-  { id: 28, name: "Rohtas" },
-  { id: 29, name: "Saharsa" },
-  { id: 30, name: "Samastipur" },
-  { id: 31, name: "Saran" },
-  { id: 32, name: "Sheikhpura" },
-  { id: 33, name: "Sheohar" },
-  { id: 34, name: "Sitamarhi" },
-  { id: 35, name: "Siwan" },
-  { id: 36, name: "Supaul" },
-  { id: 37, name: "Vaishali" },
-  { id: 38, name: "West Champaran" },
+const BIHAR_DISTRICTS = [
+  { name: "Araria", id: "BR01ARA" },
+  { name: "Arwal", id: "BR02ARW" },
+  { name: "Aurangabad", id: "BR03AUR" },
+  { name: "Banka", id: "BR04BAN" },
+  { name: "Begusarai", id: "BR05BEG" },
+  { name: "Bhagalpur", id: "BR06BHA" },
+  { name: "Bhojpur", id: "BR07BHO" },
+  { name: "Buxar", id: "BR08BUX" },
+  { name: "Darbhanga", id: "BR09DAR" },
+  { name: "East Champaran", id: "BR10EAS" },
+  { name: "Gaya", id: "BR11GAY" },
+  { name: "Gopalganj", id: "BR12GOP" },
+  { name: "Jamui", id: "BR13JAM" },
+  { name: "Jehanabad", id: "BR14JEH" },
+  { name: "Kaimur", id: "BR15KAI" },
+  { name: "Katihar", id: "BR16KAT" },
+  { name: "Khagaria", id: "BR17KHA" },
+  { name: "Kishanganj", id: "BR18KIS" },
+  { name: "Lakhisarai", id: "BR19LAK" },
+  { name: "Madhepura", id: "BR20MAD" },
+  { name: "Madhubani", id: "BR21MDB" },
+  { name: "Munger", id: "BR22MUN" },
+  { name: "Muzaffarpur", id: "BR23MUZ" },
+  { name: "Nalanda", id: "BR24NAL" },
+  { name: "Nawada", id: "BR25NAW" },
+  { name: "Patna", id: "BR26PAT" },
+  { name: "Purnia", id: "BR27PUR" },
+  { name: "Rohtas", id: "BR28ROH" },
+  { name: "Saharsa", id: "BR29SAH" },
+  { name: "Samastipur", id: "BR30SAM" },
+  { name: "Saran", id: "BR31SAR" },
+  { name: "Sheikhpura", id: "BR32SHE" },
+  { name: "Sheohar", id: "BR33SHR" },
+  { name: "Sitamarhi", id: "BR34SIT" },
+  { name: "Siwan", id: "BR35SIW" },
+  { name: "Supaul", id: "BR36SUP" },
+  { name: "Vaishali", id: "BR37VAI" },
+  { name: "West Champaran", id: "BR38WES" },
 ];
 
-const DEPARTMENTS_LIST = [
+const DEPARTMENTS = [
+  { name: "Agriculture Department, Bihar", id: "DEP01AGR" },
+  { name: "Animal and Fisheries Resources Department, Bihar", id: "DEP02AFR" },
   {
-    category: "Administration",
-    depts: [
-      { id: 101, name: "Cabinet Secretariat" },
-      { id: 102, name: "Department of Law" },
-      { id: 103, name: "Home" },
-      { id: 104, name: "Information and Public Relations Department" },
-    ],
+    name: "Backward Classes & Extremely Backward Classes Welfare Department, Bihar",
+    id: "DEP03BCE",
+  },
+  { name: "Building Construction Department, Bihar", id: "DEP04BCD" },
+  { name: "Cabinet Secretariat Department, Bihar", id: "DEP05CSD" },
+  { name: "Co-operative Department, Bihar", id: "DEP06COD" },
+  { name: "Commercial Taxes Department, Bihar", id: "DEP07CTD" },
+  { name: "Disaster Management Department, Bihar", id: "DEP08DMD" },
+  { name: "Education Department, Bihar", id: "DEP09EDU" },
+  { name: "Higher Education Department, Bihar", id: "DEP10HED" },
+  { name: "Energy Department, Bihar", id: "DEP11ENE" },
+  {
+    name: "Environment, Forest & Climate Change Department, Bihar",
+    id: "DEP12EFC",
+  },
+  { name: "Finance Department, Bihar", id: "DEP13FIN" },
+  { name: "Food & Consumer Protection Department, Bihar", id: "DEP14FCP" },
+  { name: "General Administration Department (GAD), Bihar", id: "DEP15GAD" },
+  { name: "Health & Family Welfare Department, Bihar", id: "DEP16HFW" },
+  { name: "Home Department, Bihar", id: "DEP17HOM" },
+  { name: "Industries Department, Bihar", id: "DEP18IND" },
+  { name: "Information & Public Relations Department, Bihar", id: "DEP19IPR" },
+  { name: "Information Technology Department, Bihar", id: "DEP20ITD" },
+  {
+    name: "Labour Resources (Employment & Training) Department, Bihar",
+    id: "DEP21LRE",
+  },
+  { name: "Law Department, Bihar", id: "DEP22LAW" },
+  { name: "Mines & Geology Department, Bihar", id: "DEP23MGD" },
+  { name: "Minor Water Resources Department, Bihar", id: "DEP24MWR" },
+  { name: "Water Resources / Irrigation Department, Bihar", id: "DEP25WRD" },
+  { name: "Minority Welfare Department, Bihar", id: "DEP26MWD" },
+  { name: "Panchayati Raj Department, Bihar", id: "DEP27PRD" },
+  { name: "Parliamentary Affairs Department, Bihar", id: "DEP28PAD" },
+  { name: "Planning & Development Department, Bihar", id: "DEP29PDD" },
+  {
+    name: "Public Health Engineering Department (Water Supply & Sanitation), Bihar",
+    id: "DEP30PHE",
+  },
+  { name: "Revenue & Land Reforms Department, Bihar", id: "DEP31RLR" },
+  {
+    name: "Road Construction / Public Works Department, Bihar",
+    id: "DEP32RCD",
+  },
+  { name: "Rural Development Department, Bihar", id: "DEP33RDD" },
+  {
+    name: "Science, Technology & Technical Education Department, Bihar",
+    id: "DEP34STT",
+  },
+  { name: "Social Welfare Department, Bihar", id: "DEP35SWD" },
+  { name: "Sports, Art & Culture Department, Bihar", id: "DEP36SAC" },
+  { name: "Tourism Department, Bihar", id: "DEP37TOU" },
+  { name: "Transport Department, Bihar", id: "DEP38TRA" },
+  { name: "Urban Development & Housing Department, Bihar", id: "DEP39UDH" },
+  { name: "Vigilance Department, Bihar", id: "DEP40VIG" },
+  {
+    name: "Prohibition, Excise & Registration Department, Bihar",
+    id: "DEP41PER",
   },
   {
-    category: "Finance",
-    depts: [
-      { id: 201, name: "Commercial Taxes" },
-      { id: 202, name: "Finance" },
-      { id: 203, name: "Transport" },
-    ],
+    name: "Scheduled Castes & Scheduled Tribes Welfare Department, Bihar",
+    id: "DEP42SCS",
+  },
+  { name: "Women & Child Development Department, Bihar", id: "DEP43WCD" },
+  { name: "Sugarcane Industries Department, Bihar", id: "DEP44SID" },
+  {
+    name: "Co-operative Development Department / Cooperative Department (alternate listing)",
+    id: "DEP45CDD",
   },
   {
-    category: "Human Resource",
-    depts: [
-      { id: 301, name: "Education" },
-      { id: 302, name: "Health" },
-    ],
-  },
-  {
-    category: "Infrastructure",
-    depts: [
-      { id: 401, name: "Building Construction" },
-      { id: 402, name: "Road Construction" },
-      { id: 403, name: "Rural Works" },
-    ],
-  },
-  {
-    category: "Agriculture & Allied",
-    depts: [
-      { id: 501, name: "Agriculture" },
-      { id: 502, name: "Animal & Fisheries Resources" },
-      { id: 503, name: "Environment & Forest" },
-    ],
-  },
-  {
-    category: "Art, Culture & Tourism",
-    depts: [
-      { id: 601, name: "Tourism" },
-      { id: 602, name: "Youth & Art Culture" },
-    ],
+    name: "Attached Directorates, Boards & Undertakings (e.g., BIADA, BCECEB, BSRTC etc.)",
+    id: "DEP46ADB",
   },
 ];
 
@@ -127,14 +156,10 @@ function Dashboardactivity({ searchQuery }) {
 
   // --- HELPER: Add/Remove Logic ---
   const handleAddDepartment = (e) => {
-    const deptId = parseInt(e.target.value);
+    const deptId = e.target.value; // ID is now string, e.g., "DEP01AGR"
     if (!deptId) return;
 
-    let foundDept = null;
-    DEPARTMENTS_LIST.forEach((group) => {
-      const match = group.depts.find((d) => d.id === deptId);
-      if (match) foundDept = match;
-    });
+    const foundDept = DEPARTMENTS.find((d) => d.id === deptId);
 
     if (foundDept && !selectedDepartments.some((d) => d.id === foundDept.id)) {
       setSelectedDepartments([...selectedDepartments, foundDept]);
@@ -143,10 +168,10 @@ function Dashboardactivity({ searchQuery }) {
   };
 
   const handleAddDistrict = (e) => {
-    const distId = parseInt(e.target.value);
+    const distId = e.target.value; // ID is now string, e.g., "BR01ARA"
     if (!distId) return;
 
-    const foundDist = DISTRICTS_LIST.find((d) => d.id === distId);
+    const foundDist = BIHAR_DISTRICTS.find((d) => d.id === distId);
     if (foundDist && !selectedDistricts.some((d) => d.id === foundDist.id)) {
       setSelectedDistricts([...selectedDistricts, foundDist]);
     }
@@ -161,56 +186,80 @@ function Dashboardactivity({ searchQuery }) {
     setSelectedDistricts(selectedDistricts.filter((d) => d.id !== id));
   };
 
-  // --- FILTERING LOGIC ---
-  const filteredCases = cases.filter((item) => {
-    let matchesSearch = true;
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      matchesSearch =
-        item.applicationNumber?.toLowerCase().includes(query) ||
-        item.filmmaker?.name?.toLowerCase().includes(query) ||
-        item.status?.toLowerCase().includes(query) ||
-        item.filmmaker?.email?.toLowerCase().includes(query);
-    }
-
-    let matchesStatus = true;
-    if (statusFilter !== "all") {
-      const status = item.status?.toLowerCase();
-      switch (statusFilter) {
-        case "submitted":
-          matchesStatus = status === "submitted";
-          break;
-        case "forwarded":
-          matchesStatus = status === "forwarded";
-          break;
-        case "pending":
-          matchesStatus = status === "submitted" || status === "forwarded";
-          break;
-        case "approved":
-          matchesStatus = status === "approved";
-          break;
-        case "rejected":
-          matchesStatus = status === "rejected";
-          break;
-        default:
-          matchesStatus = true;
+  // --- FILTERING & SORTING LOGIC ---
+  const filteredCases = cases
+    .filter((item) => {
+      // 1. Search Query (Application No, Producer, Email, Title)
+      let matchesSearch = true;
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase();
+        matchesSearch =
+          item.applicationNumber?.toLowerCase().includes(query) ||
+          item.filmmaker?.name?.toLowerCase().includes(query) ||
+          item.filmmaker?.email?.toLowerCase().includes(query) ||
+          item.annexureOne?.titleOfProject?.toLowerCase().includes(query) ||
+          item.nocForm?.title?.toLowerCase().includes(query);
       }
-    }
 
-    let matchesDate = true;
-    if (item.createdAt) {
-      const caseDate = new Date(item.createdAt);
-      if (dateFromFilter && caseDate < new Date(dateFromFilter))
-        matchesDate = false;
-      if (dateToFilter) {
-        const toDate = new Date(dateToFilter);
-        toDate.setHours(23, 59, 59, 999);
-        if (caseDate > toDate) matchesDate = false;
+      // 2. Status Filter
+      let matchesStatus = true;
+      if (statusFilter !== "all") {
+        const status = item.status?.toLowerCase();
+        switch (statusFilter) {
+          case "submitted":
+            matchesStatus = status === "submitted";
+            break;
+          case "forwarded":
+            matchesStatus = status === "forwarded";
+            break;
+          case "pending":
+            matchesStatus = status === "submitted" || status === "forwarded";
+            break;
+          case "approved":
+            matchesStatus = status === "approved";
+            break;
+          case "rejected":
+            matchesStatus = status === "rejected";
+            break;
+          default:
+            matchesStatus = true;
+        }
       }
-    } else if (dateFromFilter || dateToFilter) matchesDate = false;
 
-    return matchesSearch && matchesStatus && matchesDate;
-  });
+      // 3. Date Filter
+      let matchesDate = true;
+      if (item.createdAt) {
+        const caseDate = new Date(item.createdAt);
+        if (dateFromFilter && caseDate < new Date(dateFromFilter))
+          matchesDate = false;
+        if (dateToFilter) {
+          const toDate = new Date(dateToFilter);
+          toDate.setHours(23, 59, 59, 999);
+          if (caseDate > toDate) matchesDate = false;
+        }
+      } else if (dateFromFilter || dateToFilter) matchesDate = false;
+
+      return matchesSearch && matchesStatus && matchesDate;
+    })
+    .sort((a, b) => {
+      // 4. PRIORITY SORTING: Pending (Submitted/Forwarded) first, then others
+      const getPriority = (status) => {
+        const s = status?.toLowerCase();
+        if (s === "submitted") return 1;
+        if (s === "forwarded") return 2;
+        return 3;
+      };
+
+      const priorityA = getPriority(a.status);
+      const priorityB = getPriority(b.status);
+
+      if (priorityA !== priorityB) {
+        return priorityA - priorityB;
+      }
+
+      // Within same priority, newest first
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    });
 
   const getStatusInfo = (status) => {
     switch (status?.toLowerCase()) {
@@ -237,6 +286,13 @@ function Dashboardactivity({ searchQuery }) {
           label: "Rejected",
           color: "bg-red-50 text-red-700 border-red-200",
           icon: <XCircle className="h-3 w-3" />,
+        };
+      case "finalapproved":
+      case "final_approved":
+        return {
+          label: "Final Approved",
+          color: "bg-teal-50 text-teal-700 border-teal-200",
+          icon: <CheckCircle className="h-3 w-3" />,
         };
       default:
         return {
@@ -329,7 +385,7 @@ function Dashboardactivity({ searchQuery }) {
 
       // ⚠️ IMPORTANT: Sending to the exact URL from your docs
       const response = await api.post(
-        `/api/adminApplication/applications/${selectedRow.id}/forward`,
+        `/api/permissionRequest/applications/${selectedRow.id}/forward`,
         payload,
       );
 
@@ -356,6 +412,34 @@ function Dashboardactivity({ searchQuery }) {
       }
     } finally {
       setIsForwarding(false);
+    }
+  };
+
+  const handleFinalApprove = async (formData) => {
+    if (
+      !window.confirm(
+        "Are you sure you want to GRANT FINAL APPROVAL for this application?",
+      )
+    )
+      return;
+
+    try {
+      const response = await api.post(
+        `/api/adminApplication/applications/${formData.id}/final-approve`,
+      );
+
+      if (response.data.success) {
+        alert("✅ Final Approval Given! User has been notified.");
+        setShowModal(false);
+        window.location.reload();
+      } else {
+        alert(`Failed: ${response.data.message}`);
+      }
+    } catch (error) {
+      console.error("Final Approval failed:", error);
+      alert(
+        error.response?.data?.message || "Server error during final approval.",
+      );
     }
   };
 
@@ -395,14 +479,36 @@ function Dashboardactivity({ searchQuery }) {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full mt-1 px-3 py-2 border rounded-lg text-sm"
+              className="w-full mt-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#891737] outline-none transition-all"
             >
-              <option value="all">All</option>
-              <option value="submitted">New</option>
+              <option value="all">All Status</option>
+              <option value="submitted">New/Submitted</option>
               <option value="forwarded">Forwarded</option>
+              <option value="pending">Total Pending</option>
               <option value="approved">Approved</option>
               <option value="rejected">Rejected</option>
+              <option value="finalApproved">Final Approved</option>
             </select>
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-700">
+              From Date
+            </label>
+            <input
+              type="date"
+              value={dateFromFilter}
+              onChange={(e) => setDateFromFilter(e.target.value)}
+              className="w-full mt-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#891737] outline-none transition-all"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-medium text-gray-700">To Date</label>
+            <input
+              type="date"
+              value={dateToFilter}
+              onChange={(e) => setDateToFilter(e.target.value)}
+              className="w-full mt-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#891737] outline-none transition-all"
+            />
           </div>
         </div>
       )}
@@ -416,40 +522,75 @@ function Dashboardactivity({ searchQuery }) {
             <table className="min-w-full">
               <thead className="bg-gray-50 border-b border-gray-100">
                 <tr>
-                  {["Application No", "Producer", "Date", "Status"].map((h) => (
+                  {[
+                    "Application No",
+                    "Project Title",
+                    "Type",
+                    "Producer",
+                    "Date",
+                    "Status",
+                  ].map((h) => (
                     <th
                       key={h}
-                      className="px-5 py-3 text-left text-xs font-semibold text-gray-600 uppercase"
+                      className="px-5 py-4 text-left text-[10px] font-bold text-gray-400 uppercase tracking-widest"
                     >
                       {h}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-gray-100 italic">
                 {filteredCases.map((row) => {
                   const status = getStatusInfo(row.status);
+                  const projectTitle =
+                    row.annexureOne?.titleOfProject ||
+                    row.nocForm?.title ||
+                    "N/A";
+                  const projectType =
+                    row.annexureOne?.typeOfProject ||
+                    row.nocForm?.typeOfProject ||
+                    "N/A";
+
                   return (
                     <tr
                       key={row.id}
                       onClick={() => handleRowClick(row)}
-                      className="hover:bg-gray-50 cursor-pointer"
+                      className="hover:bg-gray-50/50 cursor-pointer transition-colors group"
                     >
-                      <td className="px-5 py-3.5 font-mono text-xs font-medium">
-                        {row.applicationNumber}
-                      </td>
-                      <td className="px-5 py-3.5 text-xs text-gray-900">
-                        {row.filmmaker?.name}
-                      </td>
-                      <td className="px-5 py-3.5 text-xs text-gray-500">
-                        {new Date(row.createdAt).toLocaleDateString()}
-                      </td>
-                      <td className="px-5 py-3.5">
-                        <span
-                          className={`px-2.5 py-1 rounded-full text-xs font-medium ${status.color}`}
-                        >
-                          {status.label}
+                      <td className="px-5 py-4">
+                        <span className="font-mono text-[11px] font-bold text-gray-900 bg-gray-50 px-2 py-1 rounded border border-gray-100 group-hover:border-[#891737]/20 group-hover:text-[#891737] transition-all">
+                          {row.applicationNumber}
                         </span>
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="text-xs font-bold text-gray-900 line-clamp-1 truncate max-w-[200px]">
+                          {projectTitle}
+                        </div>
+                      </td>
+                      <td className="px-5 py-4">
+                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tight">
+                          {projectType}
+                        </span>
+                      </td>
+                      <td className="px-5 py-4">
+                        <div className="text-xs font-medium text-gray-700">
+                          {row.filmmaker?.name}
+                        </div>
+                      </td>
+                      <td className="px-5 py-4 text-xs font-medium text-gray-400">
+                        {new Date(row.createdAt).toLocaleDateString("en-IN", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </td>
+                      <td className="px-5 py-4">
+                        <div
+                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-widest ${status.color}`}
+                        >
+                          {status.icon}
+                          {status.label}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -468,6 +609,7 @@ function Dashboardactivity({ searchQuery }) {
         userRole="admin"
         onForward={handleForwardClick}
         onReject={handleReject}
+        onFinalApprove={handleFinalApprove}
         showActions={true}
       />
 
@@ -506,20 +648,16 @@ function Dashboardactivity({ searchQuery }) {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-[#891737] outline-none"
                   >
                     <option value="">-- Add a Department --</option>
-                    {DEPARTMENTS_LIST.map((group) => (
-                      <optgroup key={group.category} label={group.category}>
-                        {group.depts.map((d) => (
-                          <option
-                            key={d.id}
-                            value={d.id}
-                            disabled={selectedDepartments.some(
-                              (sel) => sel.id === d.id,
-                            )}
-                          >
-                            {d.name}
-                          </option>
-                        ))}
-                      </optgroup>
+                    {DEPARTMENTS.map((d) => (
+                      <option
+                        key={d.id}
+                        value={d.id}
+                        disabled={selectedDepartments.some(
+                          (sel) => sel.id === d.id,
+                        )}
+                      >
+                        {d.name}
+                      </option>
                     ))}
                   </select>
                 </div>
@@ -557,7 +695,7 @@ function Dashboardactivity({ searchQuery }) {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-[#891737] outline-none"
                   >
                     <option value="">-- Add a District --</option>
-                    {DISTRICTS_LIST.map((d) => (
+                    {BIHAR_DISTRICTS.map((d) => (
                       <option
                         key={d.id}
                         value={d.id}
@@ -611,13 +749,7 @@ function Dashboardactivity({ searchQuery }) {
                 }
                 className="px-6 py-2 text-sm font-medium text-white bg-[#891737] hover:bg-[#6e1129] rounded-lg disabled:opacity-50 flex items-center gap-2"
               >
-                {isForwarding ? (
-                  "Forwarding..."
-                ) : (
-                  <>
-                    Forward <FaShareAlt />
-                  </>
-                )}
+                {isForwarding ? "Forwarding..." : <>Forward</>}
               </button>
             </div>
           </div>

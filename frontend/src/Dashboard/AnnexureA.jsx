@@ -4,6 +4,7 @@ import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { ArrowRight, AlertCircle } from "lucide-react";
+import UniversalPreviewModal from "./UniversalPreviewModal";
 
 // Regex Patterns
 const ALPHA_REGEX = /^[a-zA-Z\s]+$/;
@@ -259,55 +260,66 @@ const AnnextureA = ({ activeApplication }) => {
     .toISOString()
     .slice(0, 16);
 
-  const onSubmit = async (data) => {
+  const [showPreview, setShowPreview] = useState(false);
+  const [currentPreviewData, setCurrentPreviewData] = useState(null);
+
+  const handlePreview = (data) => {
     // 1. Validate: Ensure an active application exists
     if (!activeApplication || !activeApplication.id) {
-      alert(
-        "No active application found. Please create an application via the 'NOC Forms' menu first.",
-      );
+      alert("No active application found.");
       return;
     }
 
+    // Set preview data for the specific location being added
+    setCurrentPreviewData(data);
+    setShowPreview(true);
+  };
+
+  const onConfirmLocation = async () => {
+    // Proceed with adding the location (original onSubmit logic)
+    const data = currentPreviewData;
+    setShowPreview(false); // Close preview
+
     // 2. Add current form data to our aggregated list
-// Note: 'data' is the current location's form values
-const currentLocationEntry = {
-  location: data.location,
-  landmark: data.landmark,
+    // Note: 'data' is the current location's form values
+    const currentLocationEntry = {
+      location: data.location,
+      landmark: data.landmark,
+      locationType: data.locationType, // "indoor", "outdoor", "both" -> Backend might exact "Indoor", "Outdoor" or just string.
+      // Prompt example shows "Public", "Forest", "Road".
+      // I'll capitalize or keep as is. Let's capitalized first char.
+      // actually prompt example shows "Public", "Forest".
+      // The form select has "indoor", "outdoor", "both".
+      // I will map to Title Case "Indoor", "Outdoor", "Both".
+      locationType:
+        data.locationType.charAt(0).toUpperCase() + data.locationType.slice(1),
 
-  // "indoor" | "outdoor" | "both" → "Indoor" | "Outdoor" | "Both"
-  locationType:
-    data.locationType.charAt(0).toUpperCase() +
-    data.locationType.slice(1),
+      startDateTime: new Date(data.startDateTime).toISOString(),
+      endDateTime: new Date(data.endDateTime).toISOString(),
 
-  startDateTime: new Date(data.startDateTime).toISOString(),
-  endDateTime: new Date(data.endDateTime).toISOString(),
+      crewInvolvement: data.crewPublicInvolvement, // map to 'crewInvolvement'
+      personCount: parseInt(data.personCount),
 
-  crewInvolvement: data.crewPublicInvolvement,
-  personCount: parseInt(data.personCount, 10),
+      permissionDetails: data.permissionDetails,
+      locationFee: `₹${data.locationFees}`, // prompt example "₹50,000"
+      securityDeposit: `₹${data.securityDeposit}`,
+      paymentRef: data.paymentReference,
+      locationManager: `${data.locationManagerName} (${data.locationManagerPhone}, ${data.locationManagerEmail})`, // Combined details
 
-  permissionDetails: data.permissionDetails,
-  locationFee: `₹${data.locationFees}`,
-  securityDeposit: `₹${data.securityDeposit}`,
-  paymentRef: data.paymentReference,
+      sceneDetails: data.sceneDetails,
 
-  locationManager: `${data.locationManagerName} (${data.locationManagerPhone}, ${data.locationManagerEmail})`,
+      forestType:
+        data.isForestArea === "yes" && data.forestType
+          ? Array.isArray(data.forestType)
+            ? data.forestType.join(", ")
+            : data.forestType
+          : null,
+      forestDetails: data.isForestArea === "yes" ? data.forestDetails : null,
 
-  sceneDetails: data.sceneDetails,
-
-  forestType:
-    data.isForestArea === "yes" && data.forestType
-      ? Array.isArray(data.forestType)
-        ? data.forestType.join(", ")
-        : data.forestType
-      : null,
-
-  forestDetails:
-    data.isForestArea === "yes" ? data.forestDetails : null,
-
-  applicantName: data.applicantName,
-  applicantDate: data.applicantDate,
-};
-
+      // Extra identifying info if needed
+      applicantName: data.applicantName,
+      applicantDate: data.applicantDate,
+    };
 
     const updatedLocations = [...locationsData, currentLocationEntry];
     setLocationsData(updatedLocations);
@@ -419,7 +431,7 @@ const currentLocationEntry = {
         </div>
 
         <form
-          onSubmit={handleSubmit(onSubmit)}
+          onSubmit={handleSubmit(handlePreview)}
           className="space-y-8 animate-in fade-in duration-500"
         >
           {/* Section 1: Location Information */}
@@ -906,6 +918,53 @@ const currentLocationEntry = {
           padding-right: 2.5rem;
         }
       `}</style>
+      <UniversalPreviewModal
+        isOpen={showPreview}
+        onClose={() => setShowPreview(false)}
+        onConfirm={onConfirmLocation}
+        title={`LOCATION PREVIEW (${currentLocationIndex + 1}/${totalLocations})`}
+        isSubmitting={isSubmitting}
+        data={{
+          "Location Info": {
+            "Location Name": currentPreviewData?.location,
+            Landmark: currentPreviewData?.landmark,
+            Type: currentPreviewData?.locationType,
+            "Is Forest?": currentPreviewData?.isForestArea,
+          },
+          Schedule: {
+            Start: currentPreviewData?.startDateTime,
+            End: currentPreviewData?.endDateTime,
+          },
+          Involvement: {
+            "Crew/Public": currentPreviewData?.crewPublicInvolvement,
+            "Person Count": currentPreviewData?.personCount,
+          },
+          "Permissions & Fees": {
+            Details: currentPreviewData?.permissionDetails,
+            Fees: `₹${currentPreviewData?.locationFees}`,
+            "Security Deposit": `₹${currentPreviewData?.securityDeposit}`,
+            "Payment Ref": currentPreviewData?.paymentReference,
+          },
+          "Location Manager": {
+            Name: currentPreviewData?.locationManagerName,
+            Phone: currentPreviewData?.locationManagerPhone,
+            Email: currentPreviewData?.locationManagerEmail,
+          },
+          "Scene & Forest": {
+            "Scene Details": currentPreviewData?.sceneDetails,
+            "Forest Type":
+              currentPreviewData?.forestType &&
+              Array.isArray(currentPreviewData.forestType)
+                ? currentPreviewData?.forestType.join(", ")
+                : currentPreviewData?.forestType || "N/A",
+            "Forest Details": currentPreviewData?.forestDetails,
+          },
+          Authorization: {
+            Applicant: currentPreviewData?.applicantName,
+            Date: currentPreviewData?.applicantDate,
+          },
+        }}
+      />
     </div>
   );
 };

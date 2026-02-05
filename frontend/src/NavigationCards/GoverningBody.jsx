@@ -14,7 +14,7 @@ const topImages = [
     alt: "Leader 2",
     name: "Shri Pranav Kumar, IAS",
     namee: "Managing Director, BSFDFC",
-    nameee: "Secretary (Art, Culture & Youth Department)",
+    nameee: "Secretary (Art & Culture Department)",
   },
 ];
 
@@ -26,7 +26,7 @@ const boardMembers = [
   },
   {
     name: "Shri Pranav Kumar, IAS",
-    role: "Secretary, Art, Culture and Youth Department, Govt. of Bihar & Managing Director, Bihar State Film Development and Finance Corporation Limited",
+    role: "Secretary, Department of Art & Culture, Govt. of Bihar & Managing Director, Bihar State Film Development and Finance Corporation Limited",
     img: "https://firebasestorage.googleapis.com/v0/b/gatishaktibihar.firebasestorage.app/o/biharfilm%2Fhome_secy.jpeg?alt=media&token=2f9b010e-0fed-4627-949d-a4779308a995",
   },
   {

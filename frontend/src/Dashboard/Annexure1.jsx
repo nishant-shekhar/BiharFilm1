@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { ArrowRight, AlertCircle } from "lucide-react";
+import UniversalPreviewModal from "./UniversalPreviewModal";
 
 // Regex Patterns
 const ALPHA = /^[A-Za-z\s]+$/;
@@ -156,7 +157,9 @@ const Annexure1 = ({ activeApplication }) => {
     mode: "onChange",
   });
 
-  const onSubmit = async (data) => {
+  const [showPreview, setShowPreview] = useState(false);
+
+  const onSubmit = (data) => {
     // 1. Validate Pre-conditions
     if (!activeApplication || !activeApplication.id) {
       alert(
@@ -164,6 +167,11 @@ const Annexure1 = ({ activeApplication }) => {
       );
       return;
     }
+    setShowPreview(true);
+  };
+
+  const handleFinalSubmit = async () => {
+    const data = watch(); // Get current form data
 
     setIsSubmitting(true);
     try {
@@ -173,7 +181,7 @@ const Annexure1 = ({ activeApplication }) => {
         genre: data.genre,
         typeOfProject: data.projectType,
         titleOfProject: data.projectTitle,
-        durationOfProject: data.duration.toString(), // Backend might expect string or int, usually string if 'Duration'
+        durationOfProject: data.duration.toString(),
         producerName: data.producerName,
         productionHouse: data.productionHouse,
         lineProducerNameAndContact: `${data.lineProducerName} (${data.lineProducerContact})`,
@@ -208,9 +216,10 @@ const Annexure1 = ({ activeApplication }) => {
       if (response.data.success) {
         alert("Annexure 1 Submitted Successfully!");
         reset();
-        // Optional: You might want to refresh the dashboard status here, but for now we reset.
+        setShowPreview(false);
       } else {
         alert(response.data.message || "Submission failed.");
+        setShowPreview(false);
       }
     } catch (error) {
       console.error("Submission Error:", error);
@@ -218,6 +227,7 @@ const Annexure1 = ({ activeApplication }) => {
         error.response?.data?.message ||
         "An error occurred while submitting. Please try again.";
       alert(errorMsg);
+      setShowPreview(false);
     } finally {
       setIsSubmitting(false);
     }
@@ -678,6 +688,46 @@ const Annexure1 = ({ activeApplication }) => {
           padding-right: 2.5rem;
         }
       `}</style>
+      <UniversalPreviewModal
+        isOpen={showPreview}
+        onClose={() => setShowPreview(false)}
+        onConfirm={handleFinalSubmit}
+        title="PROJECT DETAILS PREVIEW (ANNEXURE 1)"
+        isSubmitting={isSubmitting}
+        data={{
+          "Project Overview": {
+            Title: watch("projectTitle"),
+            Type: watch("projectType"),
+            Language: watch("language"),
+            Genre: watch("genre"),
+            Duration: `${watch("duration")} mins`,
+          },
+          "Production Details": {
+            "Producer Name": watch("producerName"),
+            "Production House": watch("productionHouse"),
+            Budget: `₹${watch("approxBudget")}`,
+            "Est. Expenditure (Bihar)": `₹${watch("approxExpenditureBihar")}`,
+          },
+          "Shooting Schedule": {
+            "Total Days": watch("totalShootingDays"),
+            "Days in Bihar": watch("biharShootingDays"),
+            Location: watch("shootingLocation"),
+            Dates: `${watch("shootingStartDate")} to ${watch("shootingEndDate")}`,
+            Manpower: watch("estimatedManpower"),
+          },
+          "Key Personnel": {
+            "Line Producer": `${watch("lineProducerName")} (${watch("lineProducerContact")})`,
+            "Executive Producer": `${watch("producerContactName")} - ${watch("producerDesignation")}`,
+            "Producer Email": watch("producerEmail"),
+            "Producer Mobile": watch("producerMobile"),
+          },
+          "Cast & Creative": {
+            Director: watch("directorName"),
+            "Main Cast": watch("mainCast"),
+            Synopsis: watch("synopsis"),
+          },
+        }}
+      />
     </div>
   );
 };

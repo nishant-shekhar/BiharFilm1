@@ -3,6 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { ArrowRight, AlertCircle, Download, Upload } from "lucide-react";
+import UniversalPreviewModal from "./UniversalPreviewModal";
 import api from "../Components/axios";
 
 const schema = z.object({
@@ -20,13 +21,17 @@ const schema = z.object({
 export default function UndertakingForm({ activeApplication, refreshData }) {
   const [previewFile, setPreviewFile] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
+  const [showSubmissionPreview, setShowSubmissionPreview] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const {
     register,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm({ resolver: zodResolver(schema) });
+
+  const undertakingFile = watch("undertakingFile");
 
   useEffect(() => {
     const blockKeys = (e) => {
@@ -41,16 +46,25 @@ export default function UndertakingForm({ activeApplication, refreshData }) {
     return () => document.removeEventListener("keydown", blockKeys);
   }, []);
 
-  const onSubmit = async (data) => {
+  const onUploadClick = (data) => {
     if (!activeApplication?.id) {
       alert("No active application found.");
       return;
     }
+    setShowSubmissionPreview(true);
+  };
+
+  const handleFinalSubmit = async () => {
+    // We need data, but since we are using watch or we can pass data from the initial submit.
+    // However, handleFinalSubmit is called by modal which doesn't pass the form data back.
+    // So we use the watched value or getValues. 'undertakingFile' is watched.
+
+    if (!undertakingFile || !undertakingFile[0]) return;
 
     try {
       setIsSubmitting(true);
       const formData = new FormData();
-      formData.append("undertaking", data.undertakingFile[0]);
+      formData.append("undertaking", undertakingFile[0]);
 
       console.log("Submitting Undertaking for App ID:", activeApplication.id);
 
@@ -67,9 +81,11 @@ export default function UndertakingForm({ activeApplication, refreshData }) {
 
       if (response.data.success) {
         alert("Undertaking uploaded successfully!");
+        setShowSubmissionPreview(false);
         if (refreshData) refreshData();
       } else {
         alert(response.data.message || "Upload failed.");
+        setShowSubmissionPreview(false);
       }
     } catch (error) {
       console.error("Undertaking Upload Error:", error);
@@ -82,6 +98,7 @@ export default function UndertakingForm({ activeApplication, refreshData }) {
         }
       }
       alert(msg);
+      setShowSubmissionPreview(false);
     } finally {
       setIsSubmitting(false);
     }
@@ -137,7 +154,7 @@ export default function UndertakingForm({ activeApplication, refreshData }) {
           </SectionBlock>
 
           <SectionBlock title="Step 3: Upload Signed Undertaking">
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={handleSubmit(onUploadClick)} className="space-y-6">
               <div className="space-y-2">
                 <label className="text-sm font-medium text-gray-700 flex items-center justify-between">
                   Upload Signed Document <span className="text-red-500">*</span>
@@ -288,6 +305,23 @@ export default function UndertakingForm({ activeApplication, refreshData }) {
           color: #9ca3af;
         }
       `}</style>
+      <UniversalPreviewModal
+        isOpen={showSubmissionPreview}
+        onClose={() => setShowSubmissionPreview(false)}
+        onConfirm={handleFinalSubmit}
+        title="CONFIRM UNDERTAKING UPLOAD"
+        isSubmitting={isSubmitting}
+        data={{
+          "Upload Details": {
+            "Document Type": "Undertaking Form",
+            "File Name": undertakingFile?.[0]?.name || "Selected File",
+            "File Size": undertakingFile?.[0]
+              ? `${(undertakingFile[0].size / 1024 / 1024).toFixed(2)} MB`
+              : "N/A",
+            "Application ID": activeApplication?.id || "N/A",
+          },
+        }}
+      />
     </div>
   );
 }

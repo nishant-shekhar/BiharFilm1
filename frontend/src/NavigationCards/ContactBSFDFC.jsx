@@ -97,7 +97,7 @@ const ContactBSFDFC = () => {
                                     alt: "Leader 2",
                                     name: "Sri Pranav Kumar, IAS",
                                     namee: "Managing Director",
-                                    nameee: "Secretary (Art, Culture & Youth Department)",
+                                    nameee: "Secretary (Art & Culture Department)",
                                 },
                             ].map((leader, index) => (
                                 <div key={index} className="relative group w-full md:w-[450px]">

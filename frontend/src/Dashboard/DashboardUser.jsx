@@ -23,6 +23,23 @@ import {
   ChevronDown,
   ChevronRight,
   FileText,
+  Search,
+  Home,
+  Layout,
+  Layers,
+  Smartphone,
+  Zap,
+  HelpCircle,
+  FileCode,
+  Terminal,
+  LayoutDashboard,
+  User,
+  Clapperboard,
+  FileCheck,
+  FileSignature,
+  FileStack,
+  Check,
+  Key,
 } from "lucide-react";
 import api from "../Components/axios"; // ✅ Using api instance
 
@@ -34,13 +51,16 @@ const UserDashboard = () => {
   const [userEmail, setUserEmail] = useState("");
   const [producerRegistrationStatus, setProducerRegistrationStatus] =
     useState(false);
-  const [activeSection, setActiveSection] = useState("Overview");
+  const [activeSection, setActiveSection] = useState("Dashboard");
   const [nocList, setNocList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const navigate = useNavigate();
   const [nocExpanded, setNocExpanded] = useState(false);
   const [isCreatingNOC, setIsCreatingNOC] = useState(false); // Loading state for NOC creation
+
+  const [selectedAppId, setSelectedAppId] = useState(null);
+  const [expandedAppId, setExpandedAppId] = useState(null); // Track which app is expanded in sidebar
 
   // Alert state
   const [alertConfig, setAlertConfig] = useState({
@@ -93,6 +113,13 @@ const UserDashboard = () => {
       setUserId(authenticatedUser.id);
       setUserEmail(authenticatedUser.email);
       setUserRole(authenticatedUser.role?.toLowerCase());
+      if (authenticatedUser.name) {
+        setUserName(authenticatedUser.name);
+      } else {
+        console.warn(
+          "User name not found in auth response, waiting for profile data...",
+        );
+      }
 
       // Fetch detailed profile data based on role
       try {
@@ -133,43 +160,19 @@ const UserDashboard = () => {
                     : [appsData];
 
                   // 🌟 STEP 3 - Fetch Deep Details for Latest App (for Annexure A check)
+                  // Note: With multiple apps, we might want to fetch details for ALL or just on demand.
+                  // For now, let's keep the logic simple: We have the list.
+                  // We can lazily fetch Annexure A when viewing a specific app if needed,
+                  // or rely on the `my` endpoint if it returns enough info.
+                  // The previous code only checked the FIRST one.
+                  // Let's preserve the existing "check first one" logic for now to avoid breaking initial load
+                  // but we won't strictly depend on it for "locking" anymore since we have multiple apps.
+
                   if (appsList.length > 0) {
-                    const latestApp = appsList[0];
-                    try {
-                      try {
-                        // Using specific endpoint to check Annexure A status
-                        console.log(
-                          "Checking Annexure A for App ID:",
-                          latestApp.id,
-                        );
-                        const annexRes = await api.get(
-                          `/api/annexureA/applications/${latestApp.id}/annexure-a`,
-                        );
-                        if (annexRes.data.success && annexRes.data.data) {
-                          console.log(
-                            "✅ Annexure A Data Found:",
-                            annexRes.data.data,
-                          );
-                          // Mark as filled if data exists
-                          // We attach it to the app object for the sidebar check
-                          appsList[0] = {
-                            ...latestApp,
-                            annexureAData: annexRes.data.data,
-                            isAnnexureAFilled: true,
-                          };
-                        }
-                      } catch (detailErr) {
-                        console.warn(
-                          "Annexure A not filled or error:",
-                          detailErr,
-                        );
-                        // Ensure we don't false positive if 404
-                      }
-                    } catch (detailErr) {
-                      console.warn(
-                        "Could not fetch detailed NOC form:",
-                        detailErr,
-                      );
+                    // Default selected to first if none selected
+                    if (!selectedAppId) {
+                      // We won't auto-set selectedAppId here to avoid overriding user navigation,
+                      // but we can ensure nocList is set.
                     }
                   }
 
@@ -325,10 +328,9 @@ const UserDashboard = () => {
   };
 
   const handleSubmitNOC = (newNOC) => {
-    const updatedNOC = { ...newNOC, status: "Submitted" };
-    const updated = [...nocList, updatedNOC];
-    setNocList(updated);
-    setActiveSection("Overview");
+    // Optimistic update or refresh
+    // For now, just refresh
+    fetchUserProfile();
 
     showAlert({
       type: "success",
@@ -345,9 +347,19 @@ const UserDashboard = () => {
   };
 
   const sidebarItems = {
-    filmmaker: ["Overview", "Producer Registration Form", "Profile"],
-    artist: ["Overview", "Profile"],
-    vendor: ["Overview", "Profile"],
+    filmmaker: [
+      { name: "Dashboard", icon: LayoutDashboard },
+      { name: "Producer Registration Form", icon: Clapperboard },
+      { name: "Profile", icon: User },
+    ],
+    artist: [
+      { name: "Dashboard", icon: LayoutDashboard },
+      { name: "Profile", icon: User },
+    ],
+    vendor: [
+      { name: "Dashboard", icon: LayoutDashboard },
+      { name: "Profile", icon: User },
+    ],
   };
 
   const renderSection = () => {
@@ -358,8 +370,6 @@ const UserDashboard = () => {
       activeSection !== "Producer Registration Form" &&
       !loading
     ) {
-      // Ideally we handle this in useEffect, but this prevents rendering other components if state is out of sync
-      // return <ProducerRegistration />; // Or just return placeholder while useEffect switches
       setActiveSection("Producer Registration Form");
       return null; // Render nothing for a moment while state updates
     }
@@ -371,10 +381,21 @@ const UserDashboard = () => {
       userRole,
     );
 
-    // Get the active (latest) application to pass to forms
-    const activeApplication = nocList.length > 0 ? nocList[0] : null;
+    // Get the active application based on selectedAppId
+    let activeApplication = null;
+    if (selectedAppId) {
+      activeApplication = nocList.find(
+        (app) => (app.applicationId || app.id || app._id) === selectedAppId,
+      );
+    }
+    // Fallback to first if not found (or handle as null)
+    if (!activeApplication && nocList.length > 0) {
+      // activeApplication = nocList[0]; // Maybe don't fallback implicitly if we want explicit selection?
+      // Let's fallback for Overview to make sense, but for forms we might need it.
+      activeApplication = nocList[0];
+    }
 
-    if (activeSection === "Overview") {
+    if (activeSection === "Dashboard") {
       if (userRole === "filmmaker") {
         return <FilmmakerOverview nocList={nocList} />;
       } else if (userRole === "artist") {
@@ -423,7 +444,7 @@ const UserDashboard = () => {
 
     if (activeSection === "Producer Registration Form") {
       return (
-        <ProducerRegistration onSuccess={() => setActiveSection("Overview")} />
+        <ProducerRegistration onSuccess={() => setActiveSection("Dashboard")} />
       );
     }
     if (activeSection === "Artist Registration") {
@@ -469,41 +490,58 @@ const UserDashboard = () => {
           isSidebarOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        {/* Logo Section */}
-        <div className="p-5 border-b border-gray-100 flex items-center justify-between">
-          <img src={Logo1} alt="Logo" className="h-14" />
-          <button
-            className="md:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-lg"
-            onClick={() => setIsSidebarOpen(false)}
-          >
-            <X size={24} />
-          </button>
+        {/* Logo & Search Section */}
+        <div className="px-5 py-4 border-b border-gray-100">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <img src={Logo1} alt="Logo" className="h-10 w-auto" />
+              <span className="text-[9px] font-bold text-gray-700 leading-tight uppercase max-w-[120px]">
+                BIHAR STATE FILM DEVELOPMENT & FINANCE CO. LTD
+              </span>
+            </div>
+            <button
+              className="md:hidden p-2 text-gray-500 hover:bg-gray-100 rounded-lg"
+              onClick={() => setIsSidebarOpen(false)}
+            >
+              <X size={20} strokeWidth={1.5} />
+            </button>
+          </div>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 p-4 overflow-y-auto">
+        <nav className="flex-1 px-4 py-2 overflow-y-auto">
           <ul className="space-y-1">
             {/* Standard Items */}
             {(sidebarItems[userRole] || []).map((item, idx) => {
-              // LOCKING LOGIC REMOVED - using filtered list + conditional dropdown
+              const Icon = item.icon;
+              const isActive = item.name === activeSection;
+
               return (
                 <li key={idx}>
                   <button
-                    className={`w-full px-4 py-2.5 flex items-center justify-between text-sm font-medium rounded-lg transition-all duration-200 ${
-                      item === activeSection
-                        ? "text-[#891737] bg-[#891737]/5 border border-[#891737]/10"
-                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                    className={`w-full px-4 py-2 flex items-center justify-between text-[13px] font-medium rounded-xl transition-all duration-200 ${
+                      isActive
+                        ? "text-rose-600 bg-rose-50/80"
+                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50/60"
                     }`}
                     onClick={() => {
-                      if (item === "Artist Registration") {
+                      if (item.name === "Artist Registration") {
                         handleArtistClick();
                       } else {
-                        setActiveSection(item);
+                        setActiveSection(item.name);
                       }
                       setIsSidebarOpen(false);
                     }}
                   >
-                    <span>{item}</span>
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <Icon
+                        size={18}
+                        strokeWidth={1.5}
+                        className={isActive ? "text-rose-600" : "text-gray-500"}
+                      />
+                      <span className="truncate whitespace-nowrap">
+                        {item.name}
+                      </span>
+                    </div>
                   </button>
                 </li>
               );
@@ -514,33 +552,19 @@ const UserDashboard = () => {
               <li>
                 <button
                   disabled={isCreatingNOC}
-                  className={`w-full px-4 py-2.5 flex items-center justify-between text-sm font-medium rounded-lg transition-all duration-200 text-gray-600 hover:text-gray-900 hover:bg-gray-50 ${isCreatingNOC ? "opacity-70 cursor-wait" : ""}`}
+                  className={`w-full px-4 py-2 flex items-center justify-between text-[13px] font-medium rounded-xl transition-all duration-200 text-gray-600 hover:text-gray-900 hover:bg-gray-50/60 ${isCreatingNOC ? "opacity-70 cursor-wait" : ""}`}
                   onClick={async () => {
                     if (isCreatingNOC) return;
-
-                    // Toggle OFF if already expanded
                     if (nocExpanded) {
                       setNocExpanded(false);
                       return;
                     }
-
-                    // Get latest application
                     const latestApp = nocList.length > 0 ? nocList[0] : null;
-
-                    // Logic: Create NEW only if NO application exists.
-                    // If an application exists (even if submitted/rejected), we do NOT create a new one automatically.
-                    // The user must wait or use a specific "New Application" flow if we ever add one.
-                    // For now, STRICT LOCK: One active/submitted app at a time.
-
                     if (!latestApp) {
                       try {
                         setIsCreatingNOC(true);
                         const response = await api.post("/api/applications");
                         if (response.data.success) {
-                          console.log(
-                            "✅ New Application created:",
-                            response.data.data,
-                          );
                           setNocList([response.data.data, ...nocList]);
                           setNocExpanded(true);
                           setActiveSection("Annexure 1");
@@ -548,7 +572,6 @@ const UserDashboard = () => {
                       } catch (error) {
                         console.error("❌ Error creating application:", error);
                         if (error.response && error.response.status === 409) {
-                          // Already active one exists (backend safeguard)
                           setNocExpanded(true);
                         } else {
                           showAlert({
@@ -562,171 +585,286 @@ const UserDashboard = () => {
                         setIsCreatingNOC(false);
                       }
                     } else {
-                      // Active application exists - just open menu
                       setNocExpanded(true);
                     }
                   }}
                 >
-                  <span className="flex items-center gap-2">
+                  <div className="flex items-center gap-3">
                     {isCreatingNOC ? (
-                      <svg
-                        className="animate-spin h-4 w-4 text-gray-600"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        ></circle>
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
-                      </svg>
+                      <div className="h-4 w-4 border-2 border-gray-300 border-t-rose-600 rounded-full animate-spin" />
                     ) : (
-                      "NOC Forms"
+                      <FileCheck
+                        size={18}
+                        strokeWidth={1.5}
+                        className="text-gray-500"
+                      />
                     )}
-                  </span>
-                  {nocExpanded ? (
-                    <ChevronDown size={16} />
-                  ) : (
-                    <ChevronRight size={16} />
-                  )}
+                    <span>NOC Forms</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {nocExpanded ? (
+                      <ChevronDown size={14} className="text-gray-400" />
+                    ) : (
+                      <ChevronRight size={14} className="text-gray-400" />
+                    )}
+                  </div>
                 </button>
 
                 {/* Sub Menu */}
                 {nocExpanded && (
-                  <ul className="mt-1 space-y-1 pl-4 border-l-2 border-gray-100 ml-4">
-                    {[
-                      { name: "Annexure 1", key: "annexureOneCompleted" },
-                      { name: "Annexure 2", key: "nocFormCompleted" }, // "Annexure 2" corresponds to nocFormCompleted
-                      { name: "Annexure A", key: "annexureOneCompleted" }, // Simplification: checking Annexure 1 for now or specific
-                      { name: "Undertaking", key: "undertakingUploaded" },
-                    ].map((subItem) => {
-                      // Determine completion status
-                      const latestApp = nocList[0];
-                      const progress = latestApp?.progress || {};
+                  <div className="mt-1 relative">
+                    {/* Vertical line connector */}
+                    <div className="absolute left-[26px] top-0 bottom-6 w-[1px] bg-gray-200" />
 
-                      // Mapping exact keys
-                      let isCompleted = false;
-                      if (subItem.name === "Annexure 1")
-                        isCompleted = progress.annexureOneCompleted;
-                      if (subItem.name === "Annexure 2")
-                        isCompleted = progress.nocFormCompleted;
-                      if (subItem.name === "Annexure A") {
-                        // Check explicit flag from the new API call
-                        isCompleted = !!latestApp.isAnnexureAFilled;
-                      }
-                      // Wait, if 2 is done, A might still be pending.
-                      // Let's rely on Checkmark Logic:
-                      // If the user can PROCEED to next step, does that mean this one is locked?
-                      // User said: "until approval not come do not give user to again fills"
+                    <div className="pl-9 pr-4 pt-2">
+                      {/* Create New Application Button */}
+                      <button
+                        onClick={async () => {
+                          if (isCreatingNOC) return;
+                          try {
+                            setIsCreatingNOC(true);
+                            const response =
+                              await api.post("/api/applications");
+                            if (response.data.success) {
+                              // Add new app to list and expand it
+                              const newApp = response.data.data;
+                              setNocList([newApp, ...nocList]);
+                              setExpandedAppId(
+                                newApp.applicationId || newApp._id,
+                              );
+                              setSelectedAppId(
+                                newApp.applicationId || newApp._id,
+                              );
+                              setActiveSection("Annexure 1");
+                            }
+                          } catch (error) {
+                            console.error(
+                              "❌ Error creating application:",
+                              error,
+                            );
+                            showAlert({
+                              type: "error",
+                              title: "Error",
+                              message:
+                                "Failed to create new application. Please try again.",
+                            });
+                          } finally {
+                            setIsCreatingNOC(false);
+                          }
+                        }}
+                        disabled={isCreatingNOC}
+                        className="w-full mb-3 flex items-center justify-center gap-2 py-1.5 px-2 bg-gray-50 text-gray-600 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-gray-200 hover:bg-gray-100 transition-all disabled:opacity-50"
+                      >
+                        {isCreatingNOC ? (
+                          <div className="h-3 w-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                        ) : (
+                          <>
+                            <span className="text-lg leading-none">+</span>{" "}
+                            Apply New NOC
+                          </>
+                        )}
+                      </button>
 
-                      // REFINED COMPLETION LOGIC based on available keys:
-                      if (subItem.name === "Annexure 1")
-                        isCompleted = progress.annexureOneCompleted;
-                      if (subItem.name === "Annexure 2")
-                        isCompleted = progress.nocFormCompleted;
-                      // We don't have a specific `annexureACompleted` key in the log shown in Step 886.
-                      // We only saw `annexureOneCompleted` and `nocFormCompleted`.
-                      // However, user said "Annexure A submitted" is a precondition for Undertaking.
-                      // So maybe we don't lock Annexure A yet? Or we check if Undertaking is possible?
-                      // For now, let's lock what we know.
-                      if (subItem.name === "Undertaking")
-                        isCompleted = progress.undertakingUploaded;
+                      {/* List of Applications */}
+                      <div className="space-y-3">
+                        {nocList.map((app, index) => {
+                          // Ensure we have a unique ID reference.
+                          // If both IDs are missing, we can't reliably select, so we fallback to index prefixed (risk of instability if list reorders, but better than all-active).
+                          //Ideally backend guarantees _id.
+                          const appId =
+                            app.applicationId || app._id || `temp-${index}`;
 
-                      // Lock click if completed (unless Rejected? User said "until approval not come")
-                      const isLocked =
-                        isCompleted && latestApp.status !== "REJECTED"; // Allow edit if rejected? User said "until approval not come... do not give". implies strict lock.
+                          const isAppExpanded = expandedAppId === appId;
+                          const isAppSelected =
+                            selectedAppId === appId &&
+                            appId !== null &&
+                            appId !== undefined;
+                          // Determine status color
+                          const statusColors = {
+                            PENDING:
+                              "bg-yellow-100 text-yellow-700 border-yellow-200",
+                            APPROVED:
+                              "bg-green-100 text-green-700 border-green-200",
+                            REJECTED: "bg-red-100 text-red-700 border-red-200",
+                            PROCESSING:
+                              "bg-blue-100 text-blue-700 border-blue-200",
+                          };
+                          const appStatus = app.status || "PENDING";
+                          const badgeClass =
+                            statusColors[appStatus.toUpperCase()] ||
+                            "bg-gray-100 text-gray-600 border-gray-200";
 
-                      return (
-                        <li key={subItem.name}>
-                          <button
-                            className={`w-full px-4 py-2 flex items-center justify-between text-sm font-medium rounded-lg transition-all duration-200 ${
-                              activeSection === subItem.name
-                                ? "text-[#891737] bg-[#891737]/5"
-                                : "text-gray-500 hover:text-gray-900 hover:bg-gray-50"
-                            }`}
-                            onClick={() => {
-                              if (isLocked) {
-                                showAlert({
-                                  type: "success",
-                                  title: "Form Submitted",
-                                  message:
-                                    "You have successfully filled this form. Please wait for approval.",
-                                  confirmText: "Understood",
-                                });
-                              } else {
-                                setActiveSection(subItem.name);
-                                setIsSidebarOpen(false);
-                              }
-                            }}
-                          >
-                            <span>{subItem.name}</span>
-                            {isCompleted && (
-                              <span className="text-green-600 bg-green-50 rounded-full p-0.5">
-                                <svg
-                                  xmlns="http://www.w3.org/2000/svg"
-                                  className="h-4 w-4"
-                                  viewBox="0 0 20 20"
-                                  fill="currentColor"
-                                >
-                                  <path
-                                    fillRule="evenodd"
-                                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                    clipRule="evenodd"
+                          return (
+                            <div key={appId} className="relative group">
+                              {/* Application Header (Accordion) */}
+                              <button
+                                onClick={() => {
+                                  setExpandedAppId(
+                                    isAppExpanded ? null : appId,
+                                  );
+                                  setSelectedAppId(appId);
+                                }}
+                                className={`w-full flex items-center justify-between text-xs font-medium py-2 px-2 rounded-lg transition-colors ${isAppSelected ? "bg-rose-50 text-rose-700" : "text-gray-600 hover:bg-gray-50"}`}
+                              >
+                                <div className="flex flex-col items-start gap-0.5 overflow-hidden">
+                                  <span className="truncate font-bold text-[11px]">
+                                    {app.applicationId
+                                      ? `#${app.applicationId}`
+                                      : `Application ${index + 1}`}
+                                  </span>
+                                  <span
+                                    className={`text-[9px] px-1.5 py-0.5 rounded-full border uppercase tracking-wider ${badgeClass}`}
+                                  >
+                                    {appStatus}
+                                  </span>
+                                </div>
+                                {isAppExpanded ? (
+                                  <ChevronDown
+                                    size={14}
+                                    className="text-gray-400"
                                   />
-                                </svg>
-                              </span>
-                            )}
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
+                                ) : (
+                                  <ChevronRight
+                                    size={14}
+                                    className="text-gray-400"
+                                  />
+                                )}
+                              </button>
+
+                              {/* Application Forms (Nested) */}
+                              {isAppExpanded && (
+                                <ul className="mt-1 space-y-0.5 pl-2 border-l-2 border-gray-100 ml-2">
+                                  {[
+                                    { name: "Annexure 1", icon: FileStack },
+                                    { name: "Annexure 2", icon: FileCheck },
+                                    { name: "Annexure A", icon: FileStack },
+                                    {
+                                      name: "Undertaking",
+                                      icon: FileSignature,
+                                    },
+                                  ].map((subItem) => {
+                                    const progress = app.progress || {};
+                                    // Robust completion check
+                                    let isCompleted = false;
+                                    if (subItem.name === "Annexure 1")
+                                      isCompleted =
+                                        progress.annexureOneCompleted ||
+                                        !!app.forms?.annexureOne;
+                                    if (subItem.name === "Annexure 2")
+                                      isCompleted =
+                                        progress.nocFormCompleted ||
+                                        !!app.forms?.nocForm;
+                                    if (subItem.name === "Annexure A") {
+                                      const annexureAData =
+                                        app.forms?.nocForm?.data?.annexureA ||
+                                        app.forms?.nocForm?.annexureA;
+                                      isCompleted =
+                                        !!app.isAnnexureAFilled ||
+                                        (Array.isArray(annexureAData) &&
+                                          annexureAData.length > 0);
+                                    }
+                                    if (subItem.name === "Undertaking")
+                                      isCompleted =
+                                        progress.undertakingUploaded ||
+                                        !!app.forms?.undertaking;
+
+                                    const isLocked =
+                                      isCompleted && app.status !== "REJECTED";
+                                    const isActiveSub =
+                                      isAppSelected &&
+                                      activeSection === subItem.name;
+
+                                    return (
+                                      <li key={subItem.name}>
+                                        <button
+                                          className={`w-full py-2 px-2 flex items-center justify-between text-[11px] rounded-md transition-all ${
+                                            isActiveSub
+                                              ? "bg-white shadow-sm text-rose-600 font-bold"
+                                              : "text-gray-500 hover:text-gray-800 hover:bg-gray-50"
+                                          }`}
+                                          onClick={() => {
+                                            if (isLocked) {
+                                              showAlert({
+                                                type: "success",
+                                                title: "Submitted",
+                                                message:
+                                                  "Form already submitted for this active application.",
+                                                confirmText: "View Status",
+                                                onConfirm: () => {
+                                                  setActiveSection("Dashboard");
+                                                  setSelectedAppId(appId);
+                                                },
+                                              });
+                                            } else {
+                                              setSelectedAppId(appId);
+                                              setActiveSection(subItem.name);
+                                              setIsSidebarOpen(false);
+                                            }
+                                          }}
+                                        >
+                                          <div className="flex items-center gap-2">
+                                            <subItem.icon
+                                              size={14}
+                                              strokeWidth={
+                                                isActiveSub ? 2 : 1.5
+                                              }
+                                              className={
+                                                isCompleted
+                                                  ? "text-green-600"
+                                                  : ""
+                                              }
+                                            />
+                                            <span className="truncate">
+                                              {subItem.name}
+                                            </span>
+                                          </div>
+
+                                          {isCompleted && (
+                                            <Check
+                                              size={14}
+                                              className="text-green-500 font-bold"
+                                              strokeWidth={3}
+                                            />
+                                          )}
+                                        </button>
+                                      </li>
+                                    );
+                                  })}
+                                </ul>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
                 )}
               </li>
             )}
           </ul>
         </nav>
 
-        {/* User Info Section */}
-        <div className="p-4 border-t border-gray-100">
-          <div className="flex items-center gap-3 mb-3">
-            <img
-              src={UserAvatar}
-              alt="User Avatar"
-              className="w-10 h-10 rounded-full border-2 border-gray-100 object-cover"
-            />
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">
-                {userName}
-              </p>
-              <p className="text-xs text-gray-500 capitalize">{userRole}</p>
-            </div>
+        {/* User Info & Help Section */}
+        <div className="p-4 mt-auto">
+          <div className="bg-gray-50/50 rounded-2xl p-4 border border-gray-100">
+            <p className="text-[11px] font-semibold text-gray-500 mb-1">
+              Need help?
+            </p>
+            <a
+              href="mailto:support.biharfilm@gov.in"
+              className="text-[11px] font-medium text-rose-600 hover:rose-700 transition-colors block mb-4"
+            >
+              biharfilmnigam@gmail.com
+            </a>
           </div>
-
-          {/* Logout Button */}
-          <button
-            onClick={handleLogout}
-            className="w-full px-4 py-2 text-sm font-medium text-white bg-[#891737] rounded-lg hover:bg-[#891737]/90 transition-all duration-200 flex items-center justify-center"
-          >
-            <IoIosLogOut className="mr-2 text-base" />
-            Logout
-          </button>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden bg-white">
         {/* Topbar - Clean Design */}
-        <div className="bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between">
+        <div className="bg-white border-b border-gray-100 px-6 py-3 flex items-center justify-between shadow-sm relative z-20">
+          {/* Left Side: Toggle & Title */}
           <div className="flex items-center gap-4">
             <button
               className="md:hidden p-1 text-gray-500 hover:bg-gray-100 rounded-lg"
@@ -735,32 +873,77 @@ const UserDashboard = () => {
               <Menu size={24} />
             </button>
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">
+              <h2 className="text-xl font-bold text-gray-800 tracking-tight">
                 {activeSection}
               </h2>
-              <p className="text-xs text-gray-500 mt-0.5">
-                {new Date().toLocaleDateString("en-US", {
+              <p className="text-xs text-gray-500 font-medium mt-0.5">
+                {new Date().toLocaleDateString("en-IN", {
                   weekday: "long",
                   day: "numeric",
                   month: "long",
+                  year: "numeric",
                 })}
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="text-right">
-              <p className="text-sm font-medium text-gray-900">{userName}</p>
-              <p className="text-xs text-gray-500 capitalize">{userRole}</p>
+
+          {/* Right Side: Welcome & Account */}
+          <div className="flex items-center gap-6">
+            <div className="hidden md:block text-right">
+              <p className="text-sm font-bold text-gray-700">
+                Welcome,{" "}
+                <span className="text-rose-600">{userName || "User"}</span>
+              </p>
+              <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">
+                {userRole === "filmmaker" ? "Producer" : "Guest"}
+              </p>
             </div>
-            <img
-              src={UserAvatar}
-              alt="User Avatar"
-              className="w-10 h-10 rounded-full border-2 border-gray-100 object-cover"
-            />
+
+            {/* Account Dropdown */}
+            <div className="relative group">
+              <button className="flex items-center gap-2 p-1 pr-2 rounded-full border border-gray-200 hover:border-rose-200 transition-colors focus:outline-none">
+                <img
+                  src={UserAvatar}
+                  alt="User"
+                  className="w-8 h-8 rounded-full object-cover bg-gray-100"
+                />
+                <ChevronDown
+                  size={14}
+                  className="text-gray-400 group-hover:text-rose-500 transition-colors"
+                />
+              </button>
+
+              {/* Dropdown Menu (Hover) */}
+              <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-100 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 transform origin-top-right z-50">
+                <div className="p-4 border-b border-gray-50 bg-gray-50/50 rounded-t-xl">
+                  <p className="text-sm font-bold text-gray-800 truncate">
+                    {userName || "User Name"}
+                  </p>
+                  <p className="text-xs text-gray-500 capitalize">
+                    {userRole === "filmmaker" ? "Producer" : "Guest"}
+                  </p>
+                </div>
+                <div className="p-2">
+                  <button
+                    onClick={() => setActiveSection("Profile")}
+                    className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-600 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                  >
+                    <Key size={16} />
+                    <span>Update Password</span>
+                  </button>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-3 px-3 py-2 text-sm font-medium text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  >
+                    <IoIosLogOut size={16} />
+                    <span>Logout</span>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Dynamic Section Content */}
         <div className="flex-1 overflow-y-auto p-6 bg-white">
           {renderSection()}
         </div>

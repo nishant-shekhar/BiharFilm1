@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import api from "../Components/axios";
 import { validateFile } from "../utils/fileValidation";
 import { AlertCircle, ArrowRight, CheckCircle2 } from "lucide-react";
+import UniversalPreviewModal from "./UniversalPreviewModal";
 
 const ProducerRegistration = ({ onSuccess }) => {
   const [formData, setFormData] = useState({
@@ -46,6 +47,7 @@ const ProducerRegistration = ({ onSuccess }) => {
   });
   const [saveStatus, setSaveStatus] = useState("idle");
   const [validationErrors, setValidationErrors] = useState({});
+  const [showPreview, setShowPreview] = useState(false);
 
   // Company type options
   const companyTypeOptions = [
@@ -193,7 +195,7 @@ const ProducerRegistration = ({ onSuccess }) => {
 
       if (!producerDocumentation.companyIdentificationNumber.trim()) {
         errors["producerDocumentation.companyIdentificationNumber"] =
-          "Company Identification Number is required";
+          "ABCDE1234F";
       }
       if (!producerDocumentation.companyIdentificationDocument) {
         errors["producerDocumentation.companyIdentificationDocument"] =
@@ -280,7 +282,27 @@ const ProducerRegistration = ({ onSuccess }) => {
     return errors;
   };
 
-  const onSubmit = async () => {
+  const onSubmit = () => {
+    // Validate all steps before showing preview
+    // Since we are at the end, we can assume previous steps were saved/validated partially,
+    // but good to check current step or just ensure required fields are there.
+    // Ideally we should valid all steps here, but for now we rely on the step-by-step validation.
+
+    const errors = validateStep(activeStep); // Validate final step
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      setNotification({
+        show: true,
+        message: "Please fill all required fields correctly",
+        type: "warning",
+      });
+      return;
+    }
+
+    setShowPreview(true);
+  };
+
+  const handleFinalSubmit = async () => {
     try {
       setSaveStatus("saving");
 
@@ -324,8 +346,9 @@ const ProducerRegistration = ({ onSuccess }) => {
       localStorage.removeItem("producerDocumentation");
       localStorage.removeItem("lineProducerDetails");
 
-      // Reset form
       setTimeout(() => {
+        setShowPreview(false); // Close modal
+
         setFormData({
           companyDetails: {
             productionCompanyName: "",
@@ -366,6 +389,7 @@ const ProducerRegistration = ({ onSuccess }) => {
       console.error("❌ Error submitting form:", err);
 
       setSaveStatus("error");
+      setShowPreview(false); // Close modal on error to show notification
 
       let errorMessage = "Failed to submit registration. Please try again.";
 
@@ -456,6 +480,7 @@ const ProducerRegistration = ({ onSuccess }) => {
             type: sectionData[key].type,
             lastModified: sectionData[key].lastModified,
             isFile: true,
+            type: sectionData[key].type,
           };
         }
       });
@@ -772,7 +797,8 @@ const ProducerRegistration = ({ onSuccess }) => {
           ← Go Back
         </button>
         <button
-          type="submit"
+          type="button"
+          onClick={onSubmit}
           disabled={saveStatus === "saving"}
           className="inline-flex items-center px-8 py-2.5 text-sm font-semibold text-white bg-[#891737] rounded-lg hover:bg-[#70122d] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#891737] disabled:opacity-50 disabled:cursor-not-allowed transition-all"
         >
@@ -951,6 +977,15 @@ const ProducerRegistration = ({ onSuccess }) => {
           padding-right: 2.5rem;
         }
       `}</style>
+      {/* PREVIEW MODAL */}
+      <UniversalPreviewModal
+        isOpen={showPreview}
+        onClose={() => setShowPreview(false)}
+        onConfirm={handleFinalSubmit}
+        data={formData}
+        title="PRODUCER REGISTRATION FORM"
+        isSubmitting={saveStatus === "saving"}
+      />
     </div>
   );
 };

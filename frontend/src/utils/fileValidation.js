@@ -7,21 +7,17 @@
  * @param {File} file - The file object to validate.
  * @returns {{ isValid: boolean, error: string | null }} - Validation result.
  */
-export const validateFile = (file, maxSizeMB = 5) => {
+export const validateFile = (
+  file,
+  maxSizeMB = 5,
+  allowedTypes = ["image/jpeg", "image/png", "application/pdf", "image/jpg"],
+  allowedExtensions = ["jpg", "jpeg", "png", "pdf"]
+) => {
   if (!file) {
     return { isValid: false, error: "No file selected." };
   }
 
   const MAX_SIZE_BYTES = maxSizeMB * 1024 * 1024;
-  const ALLOWED_TYPES = [
-    "image/jpeg",
-    "image/png",
-    "application/pdf",
-    "image/jpg", // Some browsers might use this generic type, though usually covered by jpeg
-  ];
-
-  // Extension check as a fallback/secondary check
-  const ALLOWED_EXTENSIONS = ["jpg", "jpeg", "png", "pdf"];
   const fileExtension = file.name.split(".").pop().toLowerCase();
 
   // 1. Check File Size
@@ -34,12 +30,12 @@ export const validateFile = (file, maxSizeMB = 5) => {
 
   // 2. Check File Type (MIME type + Extension)
   if (
-    !ALLOWED_TYPES.includes(file.type) &&
-    !ALLOWED_EXTENSIONS.includes(fileExtension)
+    !allowedTypes.includes(file.type) &&
+    !allowedExtensions.includes(fileExtension)
   ) {
     return {
       isValid: false,
-      error: "Invalid file type. Only .jpg, .jpeg, .png, and .pdf are allowed.",
+      error: `Invalid file type. Allowed: ${allowedExtensions.join(", ")}`,
     };
   }
 

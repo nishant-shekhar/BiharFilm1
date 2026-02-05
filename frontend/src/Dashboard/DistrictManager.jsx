@@ -20,45 +20,46 @@ import api from "../Components/axios";
 import AlertBox from "../Components/AlertBox";
 
 // Bihar Districts Data
+// Bihar Districts Data
 const BIHAR_DISTRICTS = [
-  { name: "Araria", code: "ARA" },
-  { name: "Arwal", code: "ARW" },
-  { name: "Aurangabad", code: "AUR" },
-  { name: "Banka", code: "BAN" },
-  { name: "Begusarai", code: "BEG" },
-  { name: "Bhagalpur", code: "BHA" },
-  { name: "Bhojpur", code: "BHO" },
-  { name: "Buxar", code: "BUX" },
-  { name: "Darbhanga", code: "DAR" },
-  { name: "East Champaran", code: "ECH" },
-  { name: "Gaya", code: "GAY" },
-  { name: "Gopalganj", code: "GOP" },
-  { name: "Jamui", code: "JAM" },
-  { name: "Jehanabad", code: "JEH" },
-  { name: "Kaimur", code: "KAI" },
-  { name: "Katihar", code: "KAT" },
-  { name: "Khagaria", code: "KHA" },
-  { name: "Kishanganj", code: "KIS" },
-  { name: "Lakhisarai", code: "LAK" },
-  { name: "Madhepura", code: "MAD" },
-  { name: "Madhubani", code: "MDB" },
-  { name: "Munger", code: "MUN" },
-  { name: "Muzaffarpur", code: "MUZ" },
-  { name: "Nalanda", code: "NAL" },
-  { name: "Nawada", code: "NAW" },
-  { name: "Patna", code: "PAT" },
-  { name: "Purnia", code: "PUR" },
-  { name: "Rohtas", code: "ROH" },
-  { name: "Saharsa", code: "SAH" },
-  { name: "Samastipur", code: "SAM" },
-  { name: "Saran", code: "SAR" },
-  { name: "Sheikhpura", code: "SHE" },
-  { name: "Sheohar", code: "SHR" },
-  { name: "Sitamarhi", code: "SIT" },
-  { name: "Siwan", code: "SIW" },
-  { name: "Supaul", code: "SUP" },
-  { name: "Vaishali", code: "VAI" },
-  { name: "West Champaran", code: "WCH" },
+  { name: "Araria", id: "BR01ARA" },
+  { name: "Arwal", id: "BR02ARW" },
+  { name: "Aurangabad", id: "BR03AUR" },
+  { name: "Banka", id: "BR04BAN" },
+  { name: "Begusarai", id: "BR05BEG" },
+  { name: "Bhagalpur", id: "BR06BHA" },
+  { name: "Bhojpur", id: "BR07BHO" },
+  { name: "Buxar", id: "BR08BUX" },
+  { name: "Darbhanga", id: "BR09DAR" },
+  { name: "East Champaran", id: "BR10EAS" },
+  { name: "Gaya", id: "BR11GAY" },
+  { name: "Gopalganj", id: "BR12GOP" },
+  { name: "Jamui", id: "BR13JAM" },
+  { name: "Jehanabad", id: "BR14JEH" },
+  { name: "Kaimur", id: "BR15KAI" },
+  { name: "Katihar", id: "BR16KAT" },
+  { name: "Khagaria", id: "BR17KHA" },
+  { name: "Kishanganj", id: "BR18KIS" },
+  { name: "Lakhisarai", id: "BR19LAK" },
+  { name: "Madhepura", id: "BR20MAD" },
+  { name: "Madhubani", id: "BR21MDB" },
+  { name: "Munger", id: "BR22MUN" },
+  { name: "Muzaffarpur", id: "BR23MUZ" },
+  { name: "Nalanda", id: "BR24NAL" },
+  { name: "Nawada", id: "BR25NAW" },
+  { name: "Patna", id: "BR26PAT" },
+  { name: "Purnia", id: "BR27PUR" },
+  { name: "Rohtas", id: "BR28ROH" },
+  { name: "Saharsa", id: "BR29SAH" },
+  { name: "Samastipur", id: "BR30SAM" },
+  { name: "Saran", id: "BR31SAR" },
+  { name: "Sheikhpura", id: "BR32SHE" },
+  { name: "Sheohar", id: "BR33SHR" },
+  { name: "Sitamarhi", id: "BR34SIT" },
+  { name: "Siwan", id: "BR35SIW" },
+  { name: "Supaul", id: "BR36SUP" },
+  { name: "Vaishali", id: "BR37VAI" },
+  { name: "West Champaran", id: "BR38WES" },
 ];
 
 const DistrictPassword = ({ searchQuery = "" }) => {
@@ -101,7 +102,7 @@ const DistrictPassword = ({ searchQuery = "" }) => {
         const allUsers = res.data.users || [];
         // Filter by district_admin role
         const districtAdmins = allUsers.filter(
-          (u) => u.role === "district_admin"
+          (u) => u.role === "district_admin",
         );
         setDistricts(districtAdmins);
       }
@@ -200,7 +201,7 @@ const DistrictPassword = ({ searchQuery = "" }) => {
       district.districtName
         ?.toLowerCase()
         .includes(searchQuery.toLowerCase()) ||
-      district.districtId?.toLowerCase().includes(searchQuery.toLowerCase())
+      district.districtId?.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   const togglePasswordVisibility = (id) => {
@@ -212,7 +213,9 @@ const DistrictPassword = ({ searchQuery = "" }) => {
 
   const toggleSelectUser = (id) => {
     setSelectedUsers((prev) =>
-      prev.includes(id) ? prev.filter((userId) => userId !== id) : [...prev, id]
+      prev.includes(id)
+        ? prev.filter((userId) => userId !== id)
+        : [...prev, id],
     );
   };
 
@@ -227,11 +230,10 @@ const DistrictPassword = ({ searchQuery = "" }) => {
   const handleDistrictChange = (e) => {
     const selectedName = e.target.value;
     const selectedDistrict = BIHAR_DISTRICTS.find(
-      (d) => d.name === selectedName
+      (d) => d.name === selectedName,
     );
-    const newDistrictId = selectedDistrict
-      ? `DIST-${selectedDistrict.code}`
-      : "";
+    // Strict Auto-Assignment: districtId is derived strictly from the list
+    const newDistrictId = selectedDistrict ? selectedDistrict.id : "";
 
     setFormData({
       ...formData,
@@ -240,21 +242,7 @@ const DistrictPassword = ({ searchQuery = "" }) => {
     });
   };
 
-  const handleDistrictIdChange = (e) => {
-    const selectedId = e.target.value;
-    // Reverse lookup to find name if ID is manually changed via dropdown
-    const code = selectedId.replace("DIST-", "");
-    const selectedDistrict = BIHAR_DISTRICTS.find((d) => d.code === code);
-    const newName = selectedDistrict
-      ? selectedDistrict.name
-      : formData.districtName;
-
-    setFormData({
-      ...formData,
-      districtId: selectedId,
-      districtName: newName,
-    });
-  };
+  // handleDistrictIdChange removed to enforce strict mapping
 
   const handleAddDistrict = async () => {
     // Validation Checks
@@ -356,7 +344,7 @@ const DistrictPassword = ({ searchQuery = "" }) => {
 
         await api.post(
           `/api/auth/update-admin-password/${editingDistrict.id}`,
-          { password: formData.password }
+          { password: formData.password },
         );
       }
 
@@ -708,7 +696,7 @@ const DistrictPassword = ({ searchQuery = "" }) => {
                         >
                           <option value="">Select District</option>
                           {BIHAR_DISTRICTS.map((dist) => (
-                            <option key={dist.code} value={dist.name}>
+                            <option key={dist.id} value={dist.name}>
                               {dist.name}
                             </option>
                           ))}
@@ -719,21 +707,18 @@ const DistrictPassword = ({ searchQuery = "" }) => {
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1.5">
                         District ID <span className="text-red-500">*</span>
+                        <span className="text-xs text-gray-400 font-normal ml-1">
+                          (Auto-assigned)
+                        </span>
                       </label>
                       <div className="relative">
                         <Hash className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        <select
+                        <input
+                          type="text"
                           value={formData.districtId}
-                          onChange={handleDistrictIdChange}
-                          className="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#891737] focus:border-transparent outline-none transition-all appearance-none font-mono text-gray-600"
-                        >
-                          <option value="">Auto-generated</option>
-                          {BIHAR_DISTRICTS.map((dist) => (
-                            <option key={dist.code} value={`DIST-${dist.code}`}>
-                              DIST-{dist.code}
-                            </option>
-                          ))}
-                        </select>
+                          readOnly
+                          className="w-full pl-10 pr-4 py-2.5 bg-gray-100 border border-gray-200 rounded-lg text-sm text-gray-500 cursor-not-allowed font-mono"
+                        />
                       </div>
                     </div>
                   </div>
@@ -787,8 +772,8 @@ const DistrictPassword = ({ searchQuery = "" }) => {
                             emailValid === false
                               ? "border-red-500 focus:ring-red-200"
                               : emailValid === true
-                              ? "border-green-500 focus:ring-green-200"
-                              : "border-gray-200 focus:ring-[#891737]"
+                                ? "border-green-500 focus:ring-green-200"
+                                : "border-gray-200 focus:ring-[#891737]"
                           } rounded-lg text-sm focus:ring-2 focus:border-transparent outline-none transition-all placeholder:text-gray-300`}
                           placeholder="e.g. district.admin@bihar.gov.in"
                         />

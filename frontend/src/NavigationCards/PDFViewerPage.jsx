@@ -8,22 +8,12 @@ const PDFViewerPage = () => {
   const { docId } = useParams();
   const navigate = useNavigate();
 
-  // Used for VIEWING
   const documents = {
-    "bihar-baiscope": "/BiharBaiscope.png",
+
+    "bihar-baiskop": "/BiharBaiskop.png",
     "goa-film-brochure": "/GoaFilmBrochure.png",
     "promotion-policy": "/PromotionPolicy.png",
     "film-policy": "/filmPolicy.pdf",
-    "op-guidelines": "/OpGuidelineFilms.pdf",
-  };
-
-  // Used for DOWNLOADING (PNG docs map to PDF here)
-  const downloadMap = {
-    "bihar-baiscope": "/BiharBaiscope.pdf",
-    "goa-film-brochure": "/GoaFilmBrochure.pdf",
-    "promotion-policy": "/PromotionPolicy.pdf",
-    "film-policy": "/filmPolicy.pdf",
-    "op-guidelines": "/OpGuidelineFilms.pdf",
   };
 
   // If no docId → Show list of documents UI
@@ -39,13 +29,18 @@ const PDFViewerPage = () => {
   }
 
   const fileUrl = documents[docId];
-  const downloadUrl = downloadMap[docId] || fileUrl;
 
   if (!fileUrl) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-900 text-white">
         <div className="text-center">
           <h1 className="text-4xl font-bold mb-4">Document Not Found</h1>
+          <button
+            onClick={() => navigate("/document")}
+            className="bg-[#a92b4e] px-6 py-2 rounded-lg hover:bg-[#891737] transition"
+          >
+            Go Back
+          </button>
         </div>
       </div>
     );
@@ -55,8 +50,8 @@ const PDFViewerPage = () => {
 
   const handleDownload = () => {
     const link = document.createElement("a");
-    link.href = downloadUrl;
-    link.download = downloadUrl.split("/").pop();
+    link.href = fileUrl;
+    link.download = fileUrl.split("/").pop();
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -69,24 +64,25 @@ const PDFViewerPage = () => {
       {/* Give some space below fixed navbar */}
       <div className="pt-24">
         {isPdf ? (
-          <Flipbook pdfFile={fileUrl} />
+          <Flipbook
+            pdfFile={fileUrl}
+          />
         ) : (
           <div className="min-h-[calc(100vh-96px)] flex flex-col items-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-700 overflow-hidden relative px-4 pb-10 pt-6">
             {/* Top toolbar (Back + Download) */}
             <div className="w-full max-w-5xl flex items-center justify-between mb-6">
-              {/* If you want a Back button, you can uncomment this */}
-              {/* <button
-                onClick={() => navigate(-1)}
-                className="text-white bg-gray-700 px-4 py-2 rounded-md hover:bg-gray-600 transition"
+              <button
+                onClick={() => navigate("/")}
+                className="text-white bg-gray-800 px-4 py-2 rounded-md hover:bg-gray-700 transition flex items-center gap-2"
               >
                 ← Back
-              </button> */}
+              </button>
 
               <button
                 onClick={handleDownload}
-                className="ml-auto text-white bg-[#a92b4e] px-5 py-2 rounded-md hover:bg-[#861838] transition flex items-center gap-2"
+                className="text-white bg-[#a92b4e] px-5 py-2 rounded-md hover:bg-[#861838] transition flex items-center gap-2"
               >
-                ⬇ Download PDF
+                ⬇ Download Image
               </button>
             </div>
 

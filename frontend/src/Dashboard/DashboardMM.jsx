@@ -2,29 +2,42 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "../App.css";
 import Logo1 from "/src/assets/Logo1.png";
-import { MdSpaceDashboard } from "react-icons/md";
-import { FaRegUser } from "react-icons/fa";
 import {
+  MdSpaceDashboard,
+  MdPalette,
+  MdStore,
+  MdNotifications,
+  MdDescription,
+  MdLocationOn,
+  MdPeople,
+  MdWork,
+} from "react-icons/md"; // Keeping these as fallback or unused, but primarily switching to lucide
+// Actually, let's just stick to Lucide for the sidebars as requested.
+import {
+  LayoutDashboard,
+  Palette,
+  Store,
+  Bell,
   FileText,
+  MapPin,
+  Users,
+  Briefcase,
+  Search,
+  LogOut,
+  X,
+  Menu,
   CheckCircle,
   Clock,
   XCircle,
-  Building2,
-  Search,
-  Bell,
-  LogOut,
-  Menu,
-  X,
-  Users,
-  Film,
 } from "lucide-react";
 import Dashboardactivity from "./Dashboardactivity";
 import Artist from "./Artist";
 import VendorDirectory from "./VendorDirectory";
 import NotificationMain from "./NotificationMain";
-import { RiContractFill } from "react-icons/ri";
+import { IoIosLogOut } from "react-icons/io";
 import TenderMain from "../Dashboard/TenderMain";
 import DistrictPassword from "./DistrictManager";
+import DepartmentManager from "./DepartmentManager";
 import UserManager from "./UserManager";
 // import FilmClubAdmin from "./FilmClubAdmin";
 import AlertBox from "../Components/AlertBox";
@@ -212,6 +225,9 @@ const Dashboard = () => {
         return <DistrictPassword searchQuery={searchQuery} />;
       case "User Manager":
         return <UserManager searchQuery={searchQuery} />;
+
+      case "Department Manager":
+        return <DepartmentManager searchQuery={searchQuery} />;
       // case "Film Club":
       //   return <FilmClubAdmin searchQuery={searchQuery} />;
       case "Deleted":
@@ -233,17 +249,6 @@ const Dashboard = () => {
         return <p>Invalid section selected</p>;
     }
   };
-
-  const navigationItems = [
-    { label: "Overview", icon: <MdSpaceDashboard className="w-5 h-5" /> },
-    { label: "Artist", icon: <FaRegUser className="w-5 h-5" /> },
-    { label: "Vendor Directory", icon: <Building2 className="w-5 h-5" /> },
-    { label: "Notifications", icon: <Bell className="w-5 h-5" /> },
-    { label: "Tender", icon: <RiContractFill className="w-5 h-5" /> },
-    { label: "District Manager", icon: <RiContractFill className="w-5 h-5" /> },
-    { label: "User Manager", icon: <Users className="w-5 h-5" /> },
-    // { label: "Film Club", icon: <Film className="w-5 h-5" /> },
-  ];
 
   return (
     <div className="flex h-screen bg-white text-gray-800 overflow-hidden">
@@ -269,9 +274,14 @@ const Dashboard = () => {
       `}
       >
         {/* Logo Section */}
-        <div className="px-5 py-5 border-b border-gray-100">
+        <div className="px-5 py-4 border-b border-gray-100">
           <div className="flex items-center justify-between">
-            <img src={Logo1} alt="Logo" className="h-14" />
+            <div className="flex items-center gap-3">
+              <img src={Logo1} alt="Logo" className="h-10 w-auto" />
+              <span className="text-[9px] font-bold text-gray-700 leading-tight uppercase max-w-[120px]">
+                BIHAR STATE FILM DEVELOPMENT & FINANCE CO. LTD
+              </span>
+            </div>
             <button
               className="lg:hidden w-8 h-8 text-xs rounded-lg hover:bg-gray-100 flex items-center justify-center transition-colors"
               onClick={() => setSidebarOpen(false)}
@@ -282,41 +292,82 @@ const Dashboard = () => {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 overflow-y-auto">
-          <div className="space-y-1 text-xs">
-            {navigationItems.map((item) => (
-              <SidebarItem
-                key={item.label}
-                icon={item.icon}
-                label={item.label}
-                active={activeSection === item.label}
-                onClick={() => {
-                  setActiveSection(item.label);
-                  setSidebarOpen(false);
-                }}
-              />
-            ))}
-          </div>
+        <nav className="flex-1 px-4 py-2 overflow-y-auto">
+          <ul className="space-y-1">
+            {[
+              { label: "Overview", icon: LayoutDashboard },
+              { label: "Artist", icon: Palette },
+              { label: "Vendor Directory", icon: Store },
+              { label: "Notifications", icon: Bell },
+              { label: "Tender", icon: FileText },
+              { label: "District Manager", icon: MapPin },
+              { label: "User Manager", icon: Users },
+              { label: "Department Manager", icon: Briefcase },
+            ].map((item, idx) => {
+              const isActive = activeSection === item.label;
+              return (
+                <li key={idx}>
+                  <button
+                    className={`w-full px-4 py-2 flex items-center justify-between text-[13px] font-medium rounded-xl transition-all duration-200 ${
+                      isActive
+                        ? "text-rose-600 bg-rose-50/80"
+                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50/60"
+                    }`}
+                    onClick={() => {
+                      setActiveSection(item.label);
+                      setSidebarOpen(false);
+                    }}
+                  >
+                    <div className="flex items-center gap-3 overflow-hidden">
+                      <item.icon
+                        size={18}
+                        strokeWidth={1.5}
+                        className={isActive ? "text-rose-600" : "text-gray-500"}
+                      />
+                      <span className="truncate whitespace-nowrap">
+                        {item.label}
+                      </span>
+                    </div>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
         </nav>
 
-        {/* Sidebar Footer */}
-        <div className="p-4 border-t border-gray-100">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gray-100 border-2 border-gray-200 flex items-center justify-center flex-shrink-0">
-              <span className="text-gray-600 font-semibold text-sm">AD</span>
+        {/* User Info & Help Section */}
+        <div className="p-4 mt-auto">
+          <div className="bg-gray-50/50 rounded-2xl p-4 border border-gray-100">
+            <p className="text-[11px] font-semibold text-gray-500 mb-1">
+              Need help?
+            </p>
+            <a
+              href="mailto:biharfilmnigam@gmail.com"
+              className="text-[11px] font-medium text-rose-600 hover:rose-700 transition-colors block mb-4"
+            >
+              biharfilmnigam@gmail.com
+            </a>
+
+            <button
+              onClick={handleLogout}
+              className="w-full flex items-center gap-2 text-gray-500 hover:text-rose-600 transition-colors text-xs font-medium px-1"
+            >
+              <IoIosLogOut size={16} />
+              <span>Logout from session</span>
+            </button>
+          </div>
+
+          <div className="mt-4 px-1 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-rose-100 border border-rose-200 flex items-center justify-center text-rose-700 font-bold text-xs">
+              AD
             </div>
             <div className="flex-1 min-w-0">
-              <button
-                onClick={handleLogout}
-                className="text-xs text-gray-500 hover:text-gray-700 transition-colors flex items-center gap-1"
-              >
-                <LogOut className="w-3 h-3" />
-                Logout
-              </button>
-              <p className="text-sm font-medium text-gray-900 truncate">
+              <p className="text-[12px] font-bold text-gray-900 truncate">
                 Admin User
               </p>
-              <p className="text-xs text-gray-500 truncate">admin@bsfdfc.com</p>
+              <p className="text-[10px] text-gray-400 truncate">
+                admin@bsfdfc.com
+              </p>
             </div>
           </div>
         </div>
@@ -419,24 +470,6 @@ const Dashboard = () => {
     </div>
   );
 };
-
-const SidebarItem = ({ icon, label, active, onClick }) => (
-  <button
-    className={`
-      w-full flex items-center gap-3 px-4 py-2.5 rounded-lg
-      text-xs font-medium transition-colors
-      ${
-        active
-          ? "text-[#891737]  bg-[#891737]/5 border border-[#891737]/10"
-          : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
-      }
-    `}
-    onClick={onClick}
-  >
-    {icon}
-    <span className="flex-1 text-left text-xs">{label}</span>
-  </button>
-);
 
 const MetricCard = ({ title, value, icon, color, bgColor }) => {
   return (

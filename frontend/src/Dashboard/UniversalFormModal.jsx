@@ -12,6 +12,7 @@ import {
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
+import api from "../Components/axios";
 import NOCTimeline from "./NOCTimeline";
 
 const UniversalFormModal = ({
@@ -22,10 +23,61 @@ const UniversalFormModal = ({
   onForward,
   onApprove,
   onReject,
+  onFinalApprove,
   onView,
   showActions = true,
   customActions = null,
 }) => {
+  const [activeTab, setActiveTab] = React.useState("producerRegistration");
+  const [data, setData] = React.useState(null);
+  const [isEnriching, setIsEnriching] = React.useState(false);
+
+  // Sync internal data state with selectedRow on open
+  useEffect(() => {
+    if (isOpen && selectedRow) {
+      setData(selectedRow);
+    } else if (!isOpen) {
+      setData(null);
+    }
+  }, [isOpen, selectedRow]);
+
+  // Enrichment Logic: Fetch full details if only a summary is provided
+  useEffect(() => {
+    const fetchFullDetails = async () => {
+      // Logic for determining if enrichment is needed:
+      // If we have selectedRow but don't have deep fields like annexureOne
+      const needsEnrichment =
+        isOpen &&
+        selectedRow &&
+        (selectedRow.applicationId || selectedRow.id) &&
+        !selectedRow.annexureOne;
+
+      if (!needsEnrichment) return;
+
+      try {
+        setIsEnriching(true);
+        const targetId = selectedRow.applicationId || selectedRow.id;
+
+        const roleParam =
+          userRole === "district_admin" ? "?role=department_admin" : "";
+
+        const response = await api.get(
+          `/api/adminApplication/applications/${targetId}/details${roleParam}`,
+        );
+
+        if (response.data.success) {
+          setData(response.data.data);
+        }
+      } catch (err) {
+        console.error("❌ Modal Enrichment Failed:", err);
+      } finally {
+        setIsEnriching(false);
+      }
+    };
+
+    fetchFullDetails();
+  }, [isOpen, selectedRow, userRole]);
+
   // Close on escape key
   useEffect(() => {
     const handleEscape = (e) => {
@@ -51,656 +103,526 @@ const UniversalFormModal = ({
     };
   }, [isOpen]);
 
-  if (!isOpen || !selectedRow) return null;
+  if (!isOpen || !data) return null;
 
-  // Define sections configuration
-  // Define sections configuration based on new API structure
-  const sections = [
-    {
-      title: "Filmmaker Profile",
-      fields: [
-        ["Name", "filmmaker.user.name"],
-        ["Email", "filmmaker.user.email"],
-        [
-          "Production Company",
-          "filmmaker.producerRegistration.productionCompanyName",
-        ],
-        ["Contact Number", "filmmaker.producerRegistration.contactNumber"],
-        ["Producer Email", "filmmaker.producerRegistration.email"],
-      ],
-    },
-    selectedRow.annexureOne
-      ? {
-          title: "Annexure 1 (Project Details)",
-          fields: [
-            ["Project Title", "annexureOne.titleOfProject"],
-            ["Language", "annexureOne.language"],
-            ["Genre", "annexureOne.genre"],
-            ["Shooting Days", "annexureOne.totalShootingDays"],
-            ["Director", "annexureOne.directorAndMainCast"], // Assuming mapped
-            ["Synopsis", "annexureOne.synopsis"],
-          ],
-        }
-      : null,
-    selectedRow.nocForm
-      ? {
-          title: "NOC Form Details",
-          fields: [
-            ["Project Type", "nocForm.typeOfProject"],
-            ["Locations Count", "nocForm.numberOfShootingLocations"],
-            ["Drone Permission", "nocForm.dronePermissionRequired"],
-            ["Police Security", "nocForm.policeOrSecurityRequirement"],
-            ["Fire Scene", "nocForm.fireOrBlastingScene"],
-          ],
-        }
-      : null,
-    selectedRow.undertaking
-      ? {
-          title: "Undertaking",
-          fields: [
-            ["Example Doc", "undertaking.documentUrl"], // Will trigger URL renderer
-          ],
-        }
-      : null,
-    selectedRow.forwardedToDistricts?.length > 0 ||
-    selectedRow.forwardedToDepartments?.length > 0
-      ? {
-          title: "Forwarding History",
-          customRender: (row) => (
-            <div className="space-y-4">
-              {row.forwardedToDistricts?.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-700 mb-2">
-                    Districts
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {row.forwardedToDistricts.map((d, i) => (
-                      <span
-                        key={i}
-                        className="px-3 py-1 bg-blue-50 text-blue-700 rounded-lg text-xs border border-blue-100"
-                      >
-                        {d.districtName}{" "}
-                        <span className="text-gray-400 ml-1 text-[10px]">
-                          {new Date(d.forwardedAt).toLocaleDateString()}
-                        </span>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {row.forwardedToDepartments?.length > 0 && (
-                <div>
-                  <h4 className="text-sm font-semibold text-gray-700 mb-2">
-                    Departments
-                  </h4>
-                  <div className="flex flex-wrap gap-2">
-                    {row.forwardedToDepartments.map((d, i) => (
-                      <span
-                        key={i}
-                        className="px-3 py-1 bg-amber-50 text-amber-700 rounded-lg text-xs border border-amber-100"
-                      >
-                        {d.departmentName}{" "}
-                        <span className="text-gray-400 ml-1 text-[10px]">
-                          {new Date(d.forwardedAt).toLocaleDateString()}
-                        </span>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          ),
-        }
-      : null,
-  ].filter(Boolean);
+  // Tab definitions
+  const tabs = [
+    { id: "producerRegistration", label: "Producer Registration Form" },
+    { id: "annexureOne", label: "Annexure 1" },
+    { id: "nocForm", label: "Annexure 2" },
+    { id: "annexureA", label: "Annexure A" },
+    { id: "undertaking", label: "Undertaking" },
+  ];
 
   // Helper to access nested properties safely
   const getNestedValue = (obj, path) => {
     return path.split(".").reduce((acc, part) => acc && acc[part], obj);
   };
 
-  // Helper to load image for PDF
-  const loadImage = (url) => {
-    return new Promise((resolve) => {
-      const img = new Image();
-      img.crossOrigin = "Anonymous";
-      img.onload = () => resolve(img);
-      img.onerror = () => resolve(null);
-      img.src = url;
-    });
+  const renderDataValue = (value) => {
+    if (value === null || value === undefined || value === "") return "N/A";
+    if (typeof value === "boolean") return value ? "Yes" : "No";
+    if (
+      typeof value === "string" &&
+      (value.startsWith("http://") || value.startsWith("https://"))
+    ) {
+      return (
+        <a
+          href={value}
+          target="_blank"
+          rel="noreferrer"
+          className="text-[#891737] hover:underline inline-flex items-center gap-1 font-bold"
+        >
+          View Document <FaExternalLinkAlt className="text-[10px]" />
+        </a>
+      );
+    }
+    return String(value);
+  };
+
+  const renderTable = (dataItem, fields) => {
+    if (!dataItem)
+      return (
+        <div className="py-20 text-center text-gray-400 font-bold uppercase tracking-widest text-xs bg-gray-50 border border-dashed border-gray-200 rounded-lg">
+          Data not available in system
+        </div>
+      );
+
+    return (
+      <div className="overflow-hidden border border-gray-200 rounded-lg">
+        <table className="w-full text-left border-collapse">
+          <tbody className="divide-y divide-gray-200">
+            {fields.map(([label, key], i) => (
+              <tr key={i} className="hover:bg-gray-50 transition-colors">
+                <td className="px-6 py-4 bg-gray-50/50 text-xs font-bold text-gray-500 uppercase tracking-widest w-1/3 border-r border-gray-200">
+                  {label}
+                </td>
+                <td className="px-6 py-4 text-sm text-gray-900 font-medium">
+                  {renderDataValue(
+                    getNestedValue(dataItem, key) ?? dataItem[key],
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  };
+
+  const renderAnnexureA = (locations) => {
+    if (!locations || locations.length === 0)
+      return (
+        <div className="py-20 text-center text-gray-400 font-bold uppercase tracking-widest text-xs bg-gray-50 border border-dashed border-gray-200 rounded-lg">
+          No location records found
+        </div>
+      );
+
+    return (
+      <div className="space-y-6">
+        {locations.map((loc, i) => (
+          <div
+            key={i}
+            className="border border-gray-200 rounded-xl overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow"
+          >
+            {/* Location Header */}
+            <div className="bg-gray-50 px-6 py-4 border-b border-gray-200 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <span className="w-8 h-8 bg-[#802d44] text-white rounded-lg flex items-center justify-center font-bold text-sm">
+                  {i + 1}
+                </span>
+                <div>
+                  <h4 className="text-sm font-bold text-gray-900">
+                    {loc.location}
+                  </h4>
+                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">
+                    {loc.landmark}
+                  </p>
+                </div>
+              </div>
+              <span className="px-3 py-1 bg-blue-50 text-blue-700 rounded-full text-[10px] font-bold uppercase border border-blue-100">
+                {loc.locationType}
+              </span>
+            </div>
+
+            {/* Location Details Grid */}
+            <div className="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              {/* Column 1: Timeline & Scene */}
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">
+                    Timeline
+                  </label>
+                  <div className="text-xs font-medium text-gray-700 space-y-1 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Start:</span>
+                      <span>
+                        {new Date(loc.startDateTime).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">End:</span>
+                      <span>{new Date(loc.endDateTime).toLocaleString()}</span>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">
+                    Scene Details
+                  </label>
+                  <p className="text-xs text-gray-700 leading-relaxed italic">
+                    {loc.sceneDetails || "No scene details provided"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Column 2: Crew & Logistics */}
+              <div className="space-y-4 font-medium">
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">
+                    Crew & Manpower
+                  </label>
+                  <div className="text-xs text-gray-700">
+                    <span className="font-bold">{loc.personCount}</span> People
+                    Involved
+                    <p className="text-gray-500 mt-1 text-[11px]">
+                      {loc.crewInvolvement}
+                    </p>
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">
+                    Permission Details
+                  </label>
+                  <p className="text-xs text-gray-700 leading-relaxed">
+                    {loc.permissionDetails || "N/A"}
+                  </p>
+                </div>
+              </div>
+
+              {/* Column 3: Financials & Manager */}
+              <div className="space-y-4">
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">
+                    Financials
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="bg-green-50 border border-green-100 p-2 rounded-lg text-center">
+                      <div className="text-[9px] text-green-600 font-bold uppercase">
+                        Fee
+                      </div>
+                      <div className="text-sm font-bold text-green-800">
+                        {loc.locationFee}
+                      </div>
+                    </div>
+                    <div className="bg-amber-50 border border-amber-100 p-2 rounded-lg text-center">
+                      <div className="text-[9px] text-amber-600 font-bold uppercase">
+                        Deposit
+                      </div>
+                      <div className="text-sm font-bold text-amber-800">
+                        {loc.securityDeposit}
+                      </div>
+                    </div>
+                  </div>
+                  {loc.paymentRef && (
+                    <p className="text-[7px] text-gray-400 mt-2 font-bold uppercase">
+                      Payment Reference Number:{" "}
+                      <span className="font-bold text-[10px]">
+                        {loc.paymentRef}
+                      </span>
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest block mb-1">
+                    Location Manager
+                  </label>
+                  <div className="text-xs text-gray-700 bg-blue-50/50 p-2 rounded-lg border border-blue-100/50">
+                    {loc.locationManager}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Forest Specific (Conditional) */}
+            {(loc.forestType || loc.forestDetails) && (
+              <div className="px-6 py-4 bg-orange-50/50 border-t border-orange-100 grid grid-cols-2 gap-6">
+                <div>
+                  <label className="text-[9px] font-bold text-orange-600 uppercase tracking-widest block mb-1">
+                    Forest Type
+                  </label>
+                  <p className="text-xs text-gray-700 font-bold uppercase tracking-tight">
+                    {loc.forestType}
+                  </p>
+                </div>
+                <div>
+                  <label className="text-[9px] font-bold text-orange-600 uppercase tracking-widest block mb-1">
+                    Forest Details
+                  </label>
+                  <p className="text-xs text-gray-700 italic">
+                    {loc.forestDetails}
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  const renderTabContent = () => {
+    switch (activeTab) {
+      case "producerRegistration":
+        return renderTable(data.filmmaker?.producerRegistration, [
+          ["Company Name", "productionCompanyName"],
+          ["Company Type", "companyType"],
+          ["Authorized Rep", "authorizedRepresentative"],
+          ["Full Address", "fullAddress"],
+          ["Pin Code", "pinCode"],
+          ["State", "state"],
+          ["Country", "country"],
+          ["Email", "email"],
+          ["Contact", "contactNumber"],
+          ["CIN/Reg No", "companyIdentificationNumber"],
+          ["CIN Document", "companyIdentificationDocument"],
+          ["PAN", "pan"],
+          ["PAN Document", "panDocument"],
+          ["GST No", "gstRegistrationNumber"],
+          ["GST Certificate", "gstCertificate"],
+          ["LP Company Name", "lineProducerCompanyName"],
+          ["LP Company Type", "lineProducerCompanyType"],
+          ["LP Name", "lineProducerName"],
+          ["LP PAN", "lineProducerPan"],
+          ["LP Address", "lineProducerAddress"],
+          ["LP Pin Code", "lineProducerPinCode"],
+          ["LP State", "lineProducerState"],
+          ["LP Email", "lineProducerEmail"],
+          ["LP Mobile", "lineProducerMobile"],
+        ]);
+      case "annexureOne":
+        return renderTable(data.annexureOne, [
+          ["Project Title", "titleOfProject"],
+          ["Project Type", "typeOfProject"],
+          ["Language", "language"],
+          ["Genre", "genre"],
+          ["Duration", "durationOfProject"],
+          ["Producer Name", "producerName"],
+          ["Production House", "productionHouse"],
+          ["Line Producer", "lineProducerNameAndContact"],
+          ["Total Shooting Days", "totalShootingDays"],
+          ["Days In Bihar", "shootingDaysInBihar"],
+          ["Shooting Dates", "shootingDatesInBihar"],
+          ["Proposed Locations", "proposedShootingLocationInBihar"],
+          ["Approx Budget", "approximateBudgetOfProject"],
+          ["Expenditure In Bihar", "approximateExpenditureInBihar"],
+          ["Est. Manpower (Bihar)", "estimatedManpowerUtilizationBihar"],
+          ["Executive Producer", "executiveProducerName"],
+          ["EP Designation", "executiveProducerDesignation"],
+          ["EP Address", "executiveProducerAddress"],
+          ["EP Email", "executiveProducerEmail"],
+          ["EP Mobile", "executiveProducerMobile"],
+          ["Director & Cast", "directorAndMainCastNames"],
+          ["Synopsis", "synopsis"],
+          ["Additional Details", "details"],
+        ]);
+      case "nocForm":
+        return renderTable(data.nocForm, [
+          ["Project Title", "title"],
+          ["Project Type", "typeOfProject"],
+          ["Language", "language"],
+          ["Genre", "genre"],
+          ["Duration", "duration"],
+          ["Director & Main Cast", "directorAndMainCast"],
+          ["Synopsis", "synopsis"],
+          ["Brief Synopsis", "briefSynopsis"],
+          ["Production House", "producerHouse"],
+          ["Production House Address", "productionHouseAddress"],
+          ["Production House Email", "emailOfProductionHouse"],
+          ["Production House Contact", "contactOfProductionHouse"],
+          ["PH Constitution", "productionHouseConstitution"],
+          ["Registration Number", "registrationNumber"],
+          ["Line Producer Details", "lineProducerDetails"],
+          ["Authorized Representative", "representativeName"],
+          ["Applicant Name", "authorizedApplicantName"],
+          ["Applicant Designation", "designationOfApplicant"],
+          ["Applicant Address", "addressOfApplicant"],
+          ["Applicant Contact", "contactOfApplicant"],
+          ["Applicant Email", "emailOfApplicant"],
+          ["Main Artists at Location", "mainArtistsAtLocation"],
+          ["Shooting Locations Count", "numberOfShootingLocations"],
+          ["Drone Permission", "dronePermissionRequired"],
+          ["Animal in Shooting", "animalPartOfShooting"],
+          ["Fire/Blasting Scene", "fireOrBlastingScene"],
+          ["Temporary Structures", "temporaryStructureCreation"],
+          ["Police/Security Req", "policeOrSecurityRequirement"],
+          ["Site Contact Details", "siteContactPersonDetails"],
+          ["Branding/Asset Use", "inFilmBrandingOrAssetUse"],
+          ["Other Particulars", "otherParticulars"],
+          ["Other Details", "otherDetails"],
+          ["MIB Certificate", "mibCertificate"],
+          ["MEA Certificate", "meaCertificate"],
+          ["Official Seal", "seal"],
+          ["Signature", "signature"],
+        ]);
+      case "annexureA":
+        return renderAnnexureA(data.nocForm?.annexureA);
+      case "undertaking":
+        return renderTable(data.undertaking, [
+          ["Document", "documentUrl"],
+          ["Uploaded At", "uploadedAt"],
+        ]);
+      default:
+        return null;
+    }
   };
 
   const handleDownloadPDF = async () => {
     const doc = new jsPDF("p", "mm", "a4");
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const margin = 15;
-    let yPosition = 15;
-
-    // // Load logo
-    // const logoImg = await loadImage('/Logo1.png');
-
-    // // --- OFFICIAL HEADER (Like Government Document) ---
-
-    // // Logo on left
-    // if (logoImg) {
-    //   doc.addImage(logoImg, 'PNG', margin, yPosition, 22, 22);
-    // }
-
-    // Main Title - Centered, Bold, Underlined
-    doc.setFontSize(13);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(0, 0, 0);
-    const mainTitle =
-      "APPLICATION FORM FOR SEEKING PERMISSION TO SHOOT IN BIHAR";
-    doc.text(mainTitle, pageWidth / 2, yPosition, { align: "center" });
-
-    // Underline the title
-    const titleWidth = doc.getTextWidth(mainTitle);
-    doc.setLineWidth(0.5);
-    doc.line(
-      pageWidth / 2 - titleWidth / 2,
-      yPosition + 1,
-      pageWidth / 2 + titleWidth / 2,
-      yPosition + 1,
-    );
-
-    yPosition += 10;
-
-    // Organization Name - Centered, Bold
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(0, 0, 0);
-    doc.text(
-      "BIHAR STATE FILM DEVELOPMENT & FINANCE CORPORATION LTD",
-      pageWidth / 2,
-      yPosition,
-      { align: "center" },
-    );
-
-    yPosition += 6;
-
-    // Address - Centered
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(80, 80, 80);
-    doc.text(
-      "Morisson Building, Near Golghar, Patna - 800001, Bihar, India",
-      pageWidth / 2,
-      yPosition,
-      { align: "center" },
-    );
-
-    yPosition += 8;
-
-    // Decorative separator line
-    doc.setDrawColor(137, 23, 55); // Brand color
-    doc.setLineWidth(0.8);
-    doc.line(margin, yPosition, pageWidth - margin, yPosition);
-
-    doc.setDrawColor(220, 220, 220);
-    doc.setLineWidth(0.3);
-    doc.line(margin, yPosition + 0.5, pageWidth - margin, yPosition + 0.5);
-
-    yPosition += 6;
-
-    // --- APPLICATION METADATA BOX ---
-    doc.setFillColor(250, 250, 250);
-    doc.setDrawColor(200, 200, 200);
-    doc.setLineWidth(0.3);
-    doc.rect(margin, yPosition, pageWidth - 2 * margin, 16, "FD");
-
-    const applicationId = selectedRow.id
-      ? `APPLICATION ID: NOC-${String(selectedRow.id).padStart(5, "0")}`
-      : "DRAFT APPLICATION";
-    const status = selectedRow.status
-      ? selectedRow.status.toUpperCase().replace("_", " ")
-      : "PENDING";
-    const submittedDate = selectedRow.createdAt
-      ? `SUBMITTED: ${new Date(selectedRow.createdAt).toLocaleDateString(
-          "en-IN",
-          {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-            hour: "2-digit",
-            minute: "2-digit",
-          },
-        )}`
-      : "NOT SUBMITTED";
-
-    // Left side - Application ID
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(0, 0, 0);
-    doc.text(applicationId, margin + 3, yPosition + 5);
-
-    // Left side - Date
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(80, 80, 80);
-    doc.text(submittedDate, margin + 3, yPosition + 10);
-
-    // Right side - Status badge
-    doc.setFont("helvetica", "bold");
-    doc.text("", pageWidth - margin - 35, yPosition + 5);
-
-    // Status with color
-    if (status === "APPROVED") doc.setTextColor(22, 163, 74);
-    else if (status === "REJECTED") doc.setTextColor(220, 38, 38);
-    else if (status === "FORWARDED") doc.setTextColor(137, 23, 55);
-    else doc.setTextColor(217, 119, 6);
-
-    doc.text(status, pageWidth - margin - 25, yPosition + 5, { align: "left" });
-
-    // Production house name
-    if (selectedRow.producerHouse) {
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(80, 80, 80);
-      doc.setFontSize(7.5);
-      doc.text(
-        `PRODUCTION HOUSE: ${selectedRow.producerHouse}`,
-        margin + 3,
-        yPosition + 14,
-      );
-    }
-
-    yPosition += 20;
-
-    // --- CONTENT SECTIONS ---
-    sections.forEach((section) => {
-      const validFields = section.fields.filter(([, key]) => {
-        const value = getNestedValue(selectedRow, key);
-        return value && value !== "" && value !== "N/A";
-      });
-
-      if (validFields.length === 0) return;
-
-      // Check page break
-      if (yPosition > pageHeight - 25) {
-        doc.addPage();
-        yPosition = 15;
-      }
-
-      // Section Title
-      doc.setFillColor(137, 23, 55); // Brand maroon
-      doc.rect(margin, yPosition, pageWidth - 2 * margin, 6, "F");
-
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(8.5);
-      doc.setFont("helvetica", "bold");
-      doc.text(section.title.toUpperCase(), margin + 2, yPosition + 4);
-
-      yPosition += 6.5;
-
-      // Prepare table data
-      const tableData = validFields.map(([label, key]) => {
-        let value = getNestedValue(selectedRow, key);
-
-        if (
-          typeof value === "string" &&
-          (value.startsWith("http://") || value.startsWith("https://"))
-        ) {
-          value = "[View Document Online]";
-        }
-
-        if (typeof value === "boolean") {
-          value = value ? "Yes" : "No";
-        }
-
-        return [label, String(value)];
-      });
-
-      // Render table
-      autoTable(doc, {
-        startY: yPosition,
-        body: tableData,
-        theme: "grid",
-        styles: {
-          fontSize: 7.5,
-          cellPadding: 2.5,
-          lineColor: [220, 220, 220],
-          lineWidth: 0.2,
-          textColor: [40, 40, 40],
-          valign: "middle",
-        },
-        columnStyles: {
-          0: {
-            cellWidth: 48,
-            fontStyle: "bold",
-            fillColor: [248, 248, 248],
-            textColor: [0, 0, 0],
-          },
-          1: {
-            cellWidth: "auto",
-            fontStyle: "normal",
-            fillColor: [255, 255, 255],
-          },
-        },
-        margin: { left: margin, right: margin },
-      });
-
-      yPosition = doc.lastAutoTable.finalY + 4;
-    });
-
-    // --- FOOTER ---
-    const addFooter = () => {
-      const footerY = pageHeight - 15;
-
-      // Top line
-      doc.setDrawColor(137, 23, 55);
-      doc.setLineWidth(0.5);
-      doc.line(margin, footerY, pageWidth - margin, footerY);
-
-      // Footer content
-      doc.setFontSize(7);
-      doc.setTextColor(100, 100, 100);
-      doc.setFont("helvetica", "normal");
-
-      const pageNum = doc.internal.getCurrentPageInfo().pageNumber;
-      const totalPages = doc.internal.getNumberOfPages();
-
-      // Left
-      doc.text("BSFDFC Portal - film.bihar.gov.in", margin, footerY + 4);
-
-      // Center
-      doc.setFont("helvetica", "bold");
-      doc.text(
-        "Department of Art & Culture, Bihar",
-        pageWidth / 2,
-        footerY + 4,
-        {
-          align: "center",
-        },
-      );
-
-      // Right
-      doc.setFont("helvetica", "normal");
-      doc.text(
-        `Page ${pageNum} of ${totalPages}`,
-        pageWidth - margin,
-        footerY + 4,
-        { align: "right" },
-      );
-
-      // Bottom line - Date
-      doc.setFontSize(6.5);
-      doc.setTextColor(140, 140, 140);
-      doc.text(
-        `Generated on: ${new Date().toLocaleDateString("en-IN", {
-          day: "2-digit",
-          month: "short",
-          year: "numeric",
-          hour: "2-digit",
-          minute: "2-digit",
-        })}`,
-        pageWidth / 2,
-        footerY + 8,
-        { align: "center" },
-      );
-    };
-
-    // Add footer to all pages
-    const totalPages = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= totalPages; i++) {
-      doc.setPage(i);
-      addFooter();
-    }
-
-    // Document metadata
-    doc.setProperties({
-      title: `BSFDFC NOC Application - ${selectedRow.id || "Draft"}`,
-      subject: "Application Form for Film Shooting Permission in Bihar",
-      author: "Bihar State Film Development & Finance Corporation Ltd.",
-      keywords: "NOC, Film Shooting, Bihar, BSFDFC",
-      creator: "BSFDFC Portal",
-    });
-
-    // Save PDF
-    const fileName = `BSFDFC_NOC_Application_${selectedRow.id || "Draft"}.pdf`;
-    doc.save(fileName);
   };
 
-  // Icon mapping for file/URL fields
-  const getIconForField = (key) => {
-    const iconMap = {
-      signature: { icon: "✍️", type: "file" },
-      seal: { icon: "🏛️", type: "file" },
-      mibCertificate: { icon: "📄", type: "certificate" },
-      meaCertificate: { icon: "📋", type: "certificate" },
-    };
-    return iconMap[key];
-  };
-
-  // Check if value is a URL
-  const isUrl = (value) => {
-    if (typeof value !== "string") return false;
-    return value.startsWith("http://") || value.startsWith("https://");
-  };
-
-  // Get role-specific actions
   const getRoleActions = () => {
     if (customActions) return customActions;
 
     switch (userRole) {
       case "admin":
+        if (
+          (data.status || "").toLowerCase() === "approved" &&
+          !data.finalApproval?.completed
+        ) {
+          return (
+            <button
+              onClick={() => onFinalApprove && onFinalApprove(data)}
+              className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-bold text-xs uppercase tracking-widest transition-all flex items-center gap-2"
+            >
+              <FaCheckCircle size={14} />
+              <span>Final Approve</span>
+            </button>
+          );
+        }
         return (
-          <>
-            <button
-              onClick={() => onForward && onForward(selectedRow)}
-              className="bg-[#891737] hover:bg-[#6e1129] text-white px-8 py-3 rounded-lg font-semibold transition-colors duration-200 shadow-sm hover:shadow-md"
-            >
-              <div className="flex items-center gap-2">
-                <FaShareAlt className="text-sm" />
-                <span>Forward</span>
-              </div>
-            </button>
-            <button
-              onClick={() => onReject && onReject(selectedRow)}
-              className="bg-white hover:bg-gray-50 text-[#891737] border border-[#891737] hover:border-[#6e1129] px-8 py-3 rounded-lg font-semibold transition-colors duration-200"
-            >
-              <div className="flex items-center gap-2">
-                <FaTimes className="text-sm" />
-                <span>Reject</span>
-              </div>
-            </button>
-          </>
+          <button
+            onClick={() => onForward && onForward(data)}
+            className="bg-[#891737] hover:bg-[#6e1129] text-white px-8 py-3 rounded-lg font-bold text-xs uppercase tracking-widest transition-all"
+          >
+            Forward Application
+          </button>
         );
 
       case "district_admin":
         return (
           <>
             <button
-              onClick={() => onApprove && onApprove(selectedRow)}
-              className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-semibold transition-colors duration-200 shadow-sm hover:shadow-md"
+              onClick={() => onApprove && onApprove(data)}
+              className="bg-green-600 hover:bg-green-700 text-white px-8 py-3 rounded-lg font-bold text-xs uppercase tracking-widest transition-all"
             >
               <div className="flex items-center gap-2">
-                <FaCheckCircle className="text-sm" />
-                <span>Approve</span>
+                <FaCheckCircle size={14} />
+                <span>Validate & Approve</span>
               </div>
             </button>
             <button
-              onClick={() => onReject && onReject(selectedRow)}
-              className="bg-[#4f0419] hover:bg-red-700 text-white px-8 py-3 rounded-lg font-semibold transition-colors duration-200"
+              onClick={() => onReject && onReject(data)}
+              className="bg-[#802d44] hover:bg-red-900 text-white px-8 py-3 rounded-lg font-bold text-xs uppercase tracking-widest transition-all"
             >
               <div className="flex items-center gap-2">
-                <span>Reject</span>
+                <FaTimes size={14} />
+                <span>Decline Application</span>
               </div>
             </button>
           </>
-        );
-
-      case "filmmaker":
-        return (
-          <button
-            onClick={onClose}
-            className="bg-[#891737] hover:bg-[#6e1129] text-white px-8 py-3 rounded-lg font-semibold transition-colors duration-200"
-          >
-            <div className="flex items-center gap-2">
-              <FaEye className="text-sm" />
-              <span>Close</span>
-            </div>
-          </button>
         );
 
       default:
         return (
           <button
             onClick={onClose}
-            className="bg-gray-600 hover:bg-gray-700 text-white px-8 py-3 rounded-lg font-semibold transition-colors duration-200"
+            className="bg-gray-800 hover:bg-black text-white px-8 py-3 rounded-lg font-bold text-xs uppercase tracking-widest transition-all"
           >
-            Close
+            Close Viewer
           </button>
         );
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden border border-gray-200 flex flex-col">
-        {/* HEADER */}
-        <div className="bg-white border-b border-gray-100 px-6 py-4 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center border border-gray-100">
-              <img
-                src="/Logo1.png"
-                alt="Logo"
-                className="w-8 h-8 object-contain"
-                onError={(e) => {
-                  e.target.style.display = "none";
-                }}
-              />
+    <div className="fixed inset-0 bg-gray-900/60 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-2xl max-w-7xl w-full max-h-[95vh] overflow-hidden border border-gray-200 flex flex-col relative">
+        {/* Enrichment Loading Overlay */}
+        {isEnriching && (
+          <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] z-50 flex flex-col items-center justify-center">
+            <div className="w-12 h-12 border-4 border-gray-100 border-t-[#891737] rounded-full animate-spin mb-4" />
+            <div className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] animate-pulse">
+              Enriching Record Details...
             </div>
-            <div>
-              <h2 className="text-base font-semibold text-gray-900">
-                Application #{selectedRow.id || "DRAFT"}
-              </h2>
-              <div className="flex items-center gap-2 mt-0.5">
-                <span
-                  className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide border ${
-                    (selectedRow.status || "").toLowerCase() === "approved"
-                      ? "bg-green-50 text-green-700 border-green-200"
-                      : (selectedRow.status || "").toLowerCase() === "rejected"
-                        ? "bg-red-50 text-red-700 border-red-200"
-                        : "bg-blue-50 text-blue-700 border-blue-200"
-                  }`}
-                >
-                  {selectedRow.status || "PENDING"}
-                </span>
-                <span className="text-xs text-gray-500">
-                  {new Date(
-                    selectedRow.createdAt || Date.now(),
-                  ).toLocaleDateString("en-US", {
-                    day: "numeric",
-                    month: "short",
-                    year: "numeric",
-                  })}
-                </span>
+          </div>
+        )}
+
+        {/* HEADER */}
+        <div className="bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-8">
+            <div className="flex items-center gap-4 border-r border-gray-100 pr-8">
+              <div className="w-10 h-10 bg-gray-50 rounded-lg flex items-center justify-center border border-gray-200">
+                <img
+                  src="/Logo1.png"
+                  alt="Logo"
+                  className="w-8 h-8 object-contain"
+                />
               </div>
+              <div>
+                <h2 className="text-[11px] font-bold text-gray-400 uppercase tracking-[0.2em] mb-0.5">
+                  Application Record
+                </h2>
+                <div className="flex items-center gap-3">
+                  <h3 className="text-lg font-bold text-gray-900 tracking-tight">
+                    {data.applicationNumber || "DRAFT"}
+                  </h3>
+                  <span
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-widest border ${
+                      (data.status || "").toLowerCase() === "approved"
+                        ? "bg-green-50 text-green-700 border-green-200"
+                        : (data.status || "").toLowerCase() === "rejected"
+                          ? "bg-red-50 text-red-700 border-red-200"
+                          : "bg-blue-50 text-blue-700 border-blue-200"
+                    }`}
+                  >
+                    {data.status || "PENDING"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* HEADER LEGEND */}
+            <div className="hidden md:flex items-center gap-6">
+              {[
+                { label: "Submitted", color: "bg-purple-600" },
+                { label: "Forwarded", color: "bg-blue-600" },
+                { label: "Approved", color: "bg-green-600" },
+                { label: "Rejected", color: "bg-red-600" },
+              ].map((item) => (
+                <div key={item.label} className="flex items-center gap-2">
+                  <div
+                    className={`w-2 h-2 rounded-full ${item.color} shadow-sm shrink-0`}
+                  ></div>
+                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                    {item.label}
+                  </span>
+                </div>
+              ))}
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             <button
               onClick={handleDownloadPDF}
-              className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors"
-              title="Download PDF"
+              className="flex items-center gap-2 px-3 py-1.5 text-xs font-bold text-gray-600 hover:bg-gray-100 border border-gray-200 rounded-lg transition-colors uppercase tracking-widest"
             >
-              <FaDownload className="text-sm" />
+              <FaDownload size={12} /> PDF
             </button>
-
-            {onView && (
-              <button
-                onClick={() => onView(selectedRow)}
-                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                title="Open Externally"
-              >
-                <FaExternalLinkAlt className="text-sm" />
-              </button>
-            )}
-
-            <div className="w-px h-6 bg-gray-200 mx-1"></div>
-
+            <div className="w-px h-6 bg-gray-200"></div>
             <button
               onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors"
+              className="p-1.5 text-gray-400 hover:text-gray-900 transition-colors"
             >
-              <FaTimes className="text-lg" />
+              <FaTimes size={20} />
             </button>
           </div>
         </div>
 
+        {/* TABS SELECTOR */}
+        <div className="bg-gray-50/50 border-b border-gray-200 px-6 flex items-center gap-6 overflow-x-auto scrollbar-hide shrink-0">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`py-4 text-[10px] font-bold uppercase tracking-widest border-b-2 transition-all whitespace-nowrap flex items-center gap-2 ${
+                activeTab === tab.id
+                  ? "border-[#802d44] text-[#802d44]"
+                  : "border-transparent text-gray-400 hover:text-gray-600"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
         {/* CONTENT */}
         <div className="flex-1 overflow-hidden flex flex-col lg:flex-row">
-          {/* MAIN CONTENT */}
-          <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-8 bg-white">
-            {sections.map((section, index) => {
-              const validFields = (section.fields || []).filter(([, key]) => {
-                const value = getNestedValue(selectedRow, key);
-                return value && value !== "" && value !== "N/A";
-              });
-
-              if (validFields.length === 0 && !section.customRender)
-                return null;
-
-              return (
-                <section key={index}>
-                  <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-100 pb-2">
-                    {section.title}
-                  </h3>
-
-                  {section.customRender ? (
-                    section.customRender(selectedRow)
-                  ) : (
-                    <dl className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-6">
-                      {validFields.map(([label, key], i) => {
-                        const value = getNestedValue(selectedRow, key);
-                        const isUrlValue = isUrl(value);
-
-                        return (
-                          <div key={i}>
-                            <dt className="text-[11px] font-medium text-gray-500 uppercase tracking-wide mb-1">
-                              {label}
-                            </dt>
-                            <dd className="text-sm text-gray-900 font-medium break-words leading-relaxed">
-                              {isUrlValue ? (
-                                <a
-                                  href={value}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="text-[#891737] hover:underline inline-flex items-center gap-1 group"
-                                >
-                                  View Document{" "}
-                                  <FaExternalLinkAlt className="text-[10px] opacity-0 group-hover:opacity-100 transition-opacity" />
-                                </a>
-                              ) : (
-                                value
-                              )}
-                            </dd>
-                          </div>
-                        );
-                      })}
-                    </dl>
-                  )}
-                </section>
-              );
-            })}
+          {/* MAIN CONTENT AREA */}
+          <div className="flex-1 overflow-y-auto p-6 md:p-8 space-y-8 bg-white lg:border-r lg:border-gray-100">
+            {renderTabContent()}
           </div>
 
           {/* SIDEBAR TIMELINE */}
-          <div className="w-full lg:w-80 bg-gray-50/50 border-l border-gray-100 overflow-y-auto p-6">
-            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 border-b border-gray-200 pb-2">
-              Application Timeline
-            </h3>
-            <NOCTimeline nocForm={selectedRow} />
+          <div className="w-full lg:w-96 bg-gray-50/30 overflow-y-auto">
+            <NOCTimeline nocForm={data} />
           </div>
         </div>
 
         {/* FOOTER */}
         {showActions && (
-          <div className="border-t border-gray-100 bg-white">
-            <div className="flex justify-center gap-3 py-4">
-              {getRoleActions()}
-            </div>
+          <div className="border-t border-gray-100 bg-white px-6 py-4 flex justify-end shrink-0">
+            <div className="flex gap-4">{getRoleActions()}</div>
           </div>
         )}
       </div>

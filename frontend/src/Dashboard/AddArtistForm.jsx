@@ -18,6 +18,7 @@ import {
 import api from "../Components/axios";
 import AlertBox from "../Components/AlertBox";
 import { validateFile } from "../utils/fileValidation";
+import UniversalPreviewModal from "./UniversalPreviewModal";
 
 // Bihar Districts Data
 const BIHAR_DISTRICTS = [
@@ -75,21 +76,36 @@ const PREDEFINED_ROLES = [
   { value: "cinematographer", label: "Cinematographer" },
 ];
 
-const AddArtistForm = ({ onClose }) => {
-  const [previewImage, setPreviewImage] = useState(null);
+const AddArtistForm = ({ onClose, isEditMode = false, initialData = null }) => {
+  const [previewImage, setPreviewImage] = useState(
+    isEditMode ? initialData?.image : null,
+  );
   const [imageFile, setImageFile] = useState(null);
 
   // Basic Fields
   const [formData, setFormData] = useState({
-    fullName: "",
-    emailId: "", // Renamed to emailId per requirement
-    phoneNumber: "", // Renamed to phoneNumber per requirement
-    address: "",
-    district: "",
+    fullName: isEditMode ? initialData?.fullName || "" : "",
+    emailId: isEditMode ? initialData?.emailId || initialData?.email || "" : "",
+    phoneNumber: isEditMode ? initialData?.phoneNumber || "" : "",
+    address: isEditMode ? initialData?.address || "" : "",
+    district: isEditMode ? initialData?.district || "" : "",
   });
 
   // Experiences State
-  const [experiences, setExperiences] = useState([]);
+  const [experiences, setExperiences] = useState(() => {
+    if (isEditMode && initialData?.experiences) {
+      if (typeof initialData.experiences === "string") {
+        try {
+          return JSON.parse(initialData.experiences);
+        } catch (e) {
+          console.error("Failed to parse experiences", e);
+          return [];
+        }
+      }
+      return initialData.experiences;
+    }
+    return [];
+  });
   const [showExpForm, setShowExpForm] = useState(false);
   const [currentExp, setCurrentExp] = useState({
     role: "",
@@ -101,6 +117,8 @@ const AddArtistForm = ({ onClose }) => {
     link: "", // General link/video link
     description: "",
   });
+
+  const [showPreview, setShowPreview] = useState(false);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -324,11 +342,13 @@ const AddArtistForm = ({ onClose }) => {
     return true;
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-
     if (!validateForm()) return;
+    setShowPreview(true);
+  };
 
+  const handleFinalSubmit = async () => {
     setIsSubmitting(true);
 
     try {
@@ -339,27 +359,13 @@ const AddArtistForm = ({ onClose }) => {
       data.append("phoneNumber", formData.phoneNumber.trim());
       data.append("emailId", formData.emailId.trim());
 
-      // Combine address and district if district is selected, or just send address
-      // The prompt asked for 'address', so we just send the address field.
-      // We can append district to it if we want to preserve it, or assume address box contains full info.
-      // Let's rely on the address box, but if district is picked, maybe prepend/append it?
-      // For now, I'll just send 'address' as is.
       let finalAddress = formData.address.trim();
       if (formData.district) {
-        finalAddress += `, ${formData.district}`; // Appending district for completeness
+        finalAddress += `, ${formData.district}`;
       }
       data.append("address", finalAddress);
 
-      // Experiences
       if (experiences.length > 0) {
-        // Map to ensure any necessary transformations (like Date objects if strictly needed by backend parsing logic,
-        // though usually JSON string of date strings is fine).
-        // The prompt snippet showed logic like `durationFrom: new Date(exp.durationFrom)`.
-        // If the backend parses this JSON string, standard ISO date strings are best.
-        // HTML date input values are YYYY-MM-DD strings, which differ slightly from standard ISO (no time).
-        // Let's format them as full ISO strings if we can, or just pass the string if backend handles it.
-        // Safe bet: Pass standard string, let backend parse.
-
         const formattedExperiences = experiences.map((exp) => ({
           role: exp.role,
           description: exp.description,
@@ -380,21 +386,30 @@ const AddArtistForm = ({ onClose }) => {
         data.append("experiences", JSON.stringify([]));
       }
 
-      const response = await api.post("/api/admin/artist/addArtist", data);
+      const url = isEditMode
+        ? `/api/admin/artist/updateArtist/${initialData.id}`
+        : "/api/admin/artist/addArtist";
+      const method = isEditMode ? "put" : "post";
+
+      const response = await api[method](url, data);
 
       if (response.data) {
         setAlertState({
           isOpen: true,
           type: "success",
           title: "Success",
-          message: "Artist registered successfully!",
+          message: isEditMode
+            ? "Artist updated successfully!"
+            : "Artist registered successfully!",
           onConfirm: () => {
+            setShowPreview(false);
             if (onClose) onClose();
           },
         });
       }
     } catch (error) {
       console.error("Submit error:", error);
+      setShowPreview(false); // Close modal on error
       setAlertState({
         isOpen: true,
         type: "error",
@@ -417,7 +432,7 @@ const AddArtistForm = ({ onClose }) => {
           <div className="px-8 py-10 border-b border-gray-100 flex items-center justify-between bg-gray-50 flex-shrink-0">
             <div>
               <h3 className="text-xl font-bold text-gray-900">
-                Add New Artist
+                {isEditMode ? "Edit Artist Profile" : "Add New Artist"}
               </h3>
               <p className="text-sm text-gray-500 mt-0.5">
                 Fill in the details to register an artist.
@@ -857,6 +872,37 @@ const AddArtistForm = ({ onClose }) => {
           onConfirm={alertState.onConfirm}
         />
       </div>
+      <UniversalPreviewModal
+        isOpen={showPreview}
+        onClose={() => setShowPreview(false)}
+        onConfirm={handleFinalSubmit}
+        title="FILMMAKER REGISTRATION PREVIEW"
+        isSubmitting={isSubmitting}
+        data={{
+          PersonalDetails: {
+            FullName: formData.fullName,
+            Email: formData.emailId,
+            Phone: formData.phoneNumber,
+            Address: formData.address,
+            District: formData.district,
+            Photo: imageFile ? imageFile.name : "Not Uploaded",
+          },
+          ...experiences.reduce(
+            (acc, exp, i) => ({
+              ...acc,
+              [`Experience ${i + 1}`]: {
+                Role: exp.role,
+                Film: exp.filmTitle,
+                RoleInFilm: exp.roleInFilm,
+                Duration: `${exp.durationFrom || ""} - ${exp.durationTo || ""}`,
+                IMDb: exp.imdbLink,
+                Link: exp.link,
+              },
+            }),
+            {},
+          ),
+        }}
+      />
     </>
   );
 };
