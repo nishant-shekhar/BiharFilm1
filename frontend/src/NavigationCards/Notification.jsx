@@ -20,7 +20,7 @@ const Notifications = () => {
   const fetchNotifications = async () => {
     try {
       const { data } = await axios.get(
-        "https://bsfdfcbackend.onrender.com/api/notification/notifications"
+        "https://film.bihar.gov.in/api/notification/notifications"
       );
       setNotifications(data.notifications || []);
     } catch (error) {

@@ -19,7 +19,7 @@ const Map = () => {
   const [focusedVendor, setFocusedVendor] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const BASE_URL = "https://bsfdfcbackend.onrender.com";
+  const BASE_URL = "https://film.bihar.gov.in";
 
   useEffect(() => {
     const fetchVendors = async () => {

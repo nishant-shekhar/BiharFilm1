@@ -108,7 +108,7 @@ const DEPARTMENTS = [
     id: "DEP34STT",
   },
   { name: "Social Welfare Department, Bihar", id: "DEP35SWD" },
-  { name: "Sports, Art & Culture Department, Bihar", id: "DEP36SAC" },
+  { name: "Sports, Art, Culture & Youth Department, Bihar", id: "DEP36SAC" },
   { name: "Tourism Department, Bihar", id: "DEP37TOU" },
   { name: "Transport Department, Bihar", id: "DEP38TRA" },
   { name: "Urban Development & Housing Department, Bihar", id: "DEP39UDH" },

@@ -20,7 +20,7 @@ const Tenders = () => {
   const fetchTenders = async () => {
     try {
       const { data } = await axios.get(
-        // "https://bsfdfcbackend.onrender.com/api/tender/tenders"
+         "https://film.bihar.gov.in/api/tender/tenders"
       );
       setTenders(data.tenders || []);
     } catch (error) {

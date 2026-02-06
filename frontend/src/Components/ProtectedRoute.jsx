@@ -27,7 +27,7 @@ const ProtectedRoute = ({ allowedRoles }) => {
     const checkAuth = async () => {
       const startTime = Date.now();
       try {
-        console.log("📡 Calling /api/auth/me...");
+        console.log("📡 Calling /auth/me...");
         const res = await api.get("/api/auth/me");
         console.log("✅ Auth response:", res.data);
         setUser(res.data.user);

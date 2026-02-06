@@ -55,7 +55,7 @@ const UniversalPreviewModal = ({
             </h1>
 
             <h2 className="text-sm md:text-base text-gray-700 font-serif">
-              Department of Art & Culture, Govt. of Bihar
+              Department of Art, Culture & Youth, Govt. of Bihar
             </h2>
 
             <p className="text-xs md:text-sm text-gray-600 font-serif">

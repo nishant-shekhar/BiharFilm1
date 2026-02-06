@@ -19,7 +19,7 @@ const Security = () => {
 
   // Use the full URL as per original component, but wrapped in try-catch
   const FETCH_URL =
-    "https://bsfdfcbackend.onrender.com/api/vendor/securityvendors";
+    "https://film.bihar.gov.in/api/vendor/securityvendors";
 
   useEffect(() => {
     const fetchProviders = async () => {

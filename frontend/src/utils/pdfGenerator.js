@@ -3,7 +3,7 @@ import autoTable from "jspdf-autotable";
 import Logo1 from "../assets/Logo1.png";
 
 const COMPANY_NAME = "BIHAR STATE FILM DEVELOPMENT & FINANCE CORPORATION";
-const DEPT_NAME = "Department of Art & Culture, Govt. of Bihar";
+const DEPT_NAME = "Department of Art, Culture & Youth, Govt. of Bihar";
 const ADDRESS = "Morisson Building, Near Golghar, Patna-800001, Bihar, India";
 
 /**

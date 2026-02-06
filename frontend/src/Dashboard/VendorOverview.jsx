@@ -469,7 +469,7 @@ const VendorDashboard = () => {
               <strong>Issue:</strong> HTTP 404 - API endpoint not found
             </p>
             <p>
-              <strong>Backend URL:</strong> https://bsfdfcbackend.onrender.com
+              <strong>Backend URL:</strong> https://film.bihar.gov.in
             </p>
             <p>
               <strong>Expected Endpoints:</strong>
@@ -491,7 +491,7 @@ const VendorDashboard = () => {
               </button>
               <button
                 onClick={() =>
-                  window.open("https://bsfdfcbackend.onrender.com", "_blank")
+                  window.open("https://film.bihar.gov.in", "_blank")
                 }
                 className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-sm"
               >

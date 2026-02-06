@@ -32,7 +32,7 @@ const DownloadDashboard = ({ selectedRow }) => {
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
     doc.setTextColor(0, 0, 0);
-    doc.text("Department of Art & Culture", pageWidth/2, 25, { align: "center" });
+    doc.text("Department of Art, Culture & Youth", pageWidth/2, 25, { align: "center" });
 
     // Logo (positioned left)
     try {

@@ -168,7 +168,7 @@ const VendorRegistrationForm = () => {
         console.log(key, value);
       }
 
-      const response = await fetch('https://bsfdfcbackend.onrender.com/api/vendor/addvendors', {
+      const response = await fetch('https://film.bihar.gov.in/api/vendor/addvendors', {
         method: 'POST',
         body: submitData,
       });
