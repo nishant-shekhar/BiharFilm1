@@ -1620,6 +1620,29 @@ export const ExperienceCard = ({ artist, onUpdate }) => {
     </section>
   );
 };
+
+
+// ✅ helpers for requested changes
+const MAX_PHONE_DIGITS = 12;
+
+const getMaxDobDate = () => {
+  const d = new Date();
+  d.setFullYear(d.getFullYear() - 8); // must be at least 8 years old
+  return d.toISOString().split("T")[0]; // yyyy-mm-dd
+};
+
+const calcAge = (yyyy_mm_dd) => {
+  if (!yyyy_mm_dd) return null;
+  const dob = new Date(yyyy_mm_dd);
+  const today = new Date();
+
+  let age = today.getFullYear() - dob.getFullYear();
+  const m = today.getMonth() - dob.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
+  return age;
+};
+
+// NOTE: validateFile must exist in your project as you already used it.
 export const EditProfileModal = ({
   artist,
   onClose,
@@ -1675,8 +1698,19 @@ export const EditProfileModal = ({
     fetchAuthDetails();
   }, [isCreating]);
 
+  // ✅ changed: phone number max 12 digits + numeric only
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+
+    if (name === "phoneNumber") {
+      const digitsOnly = String(value)
+        .replace(/\D/g, "")
+        .slice(0, MAX_PHONE_DIGITS);
+      setFormData((prev) => ({ ...prev, phoneNumber: digitsOnly }));
+      return;
+    }
+
+    setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
   const handleImageChange = (e) => {
@@ -1713,6 +1747,14 @@ export const EditProfileModal = ({
     e.preventDefault();
     setIsSubmitting(true);
 
+    // ✅ DOB validation: must be >= 8 years
+    const age = calcAge(formData.dob);
+    if (age !== null && age < 8) {
+      alert("Age must be at least 8 years.");
+      setIsSubmitting(false);
+      return;
+    }
+
     // Validation
     if (
       !formData.fullName ||
@@ -1723,8 +1765,17 @@ export const EditProfileModal = ({
       !formData.address
     ) {
       alert(
-        "Please fill all required fields (Name, Email, Phone, DOB, Gender, Address).",
+        "Please fill all required fields (Name, Email, Phone, DOB, Gender, Address)."
       );
+      setIsSubmitting(false);
+      return;
+    }
+
+    // ✅ Phone validation: max 12 digits
+    if (
+      String(formData.phoneNumber).replace(/\D/g, "").length > MAX_PHONE_DIGITS
+    ) {
+      alert("Phone number should not exceed 12 digits.");
       setIsSubmitting(false);
       return;
     }
@@ -1754,15 +1805,15 @@ export const EditProfileModal = ({
           [];
         const cleanSpecializations =
           base.specializations?.map((s) =>
-            typeof s === "object" ? s.name : s,
+            typeof s === "object" ? s.name : s
           ) || [];
         const cleanVideoLinks =
           base.videoLinks?.map((v) =>
-            typeof v === "object" ? v.link || v.url : v,
+            typeof v === "object" ? v.link || v.url : v
           ) || [];
         const cleanGallery =
           base.galleryImages?.map((img) =>
-            typeof img === "object" ? img.url || img.link : img,
+            typeof img === "object" ? img.url || img.link : img
           ) || [];
 
         data.append("professions", JSON.stringify(cleanProfessions));
@@ -1846,6 +1897,7 @@ export const EditProfileModal = ({
                   : "Click pencil to change photo"}
               </p>
             </div>
+
             {/* Cropper Modal Overlay */}
             {showCropper && tempImageSrc && (
               <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4">
@@ -1865,6 +1917,7 @@ export const EditProfileModal = ({
               <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-4">
                 Basic Information
               </h4>
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium mb-1">
@@ -1883,6 +1936,7 @@ export const EditProfileModal = ({
                     )}
                   </div>
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium mb-1">
                     Email *
@@ -1900,6 +1954,7 @@ export const EditProfileModal = ({
                     )}
                   </div>
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium mb-1">
                     Phone *
@@ -1908,9 +1963,13 @@ export const EditProfileModal = ({
                     name="phoneNumber"
                     value={formData.phoneNumber}
                     onChange={handleChange}
+                    inputMode="numeric"
+                    pattern="\d*"
+                    maxLength={MAX_PHONE_DIGITS}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:border-[#891737]"
                     placeholder="Required"
                   />
+
                   <div className="mt-2 flex items-center gap-4">
                     <span className="text-xs text-gray-500">
                       Would you like to show your phone number publicly?
@@ -1922,19 +1981,26 @@ export const EditProfileModal = ({
                           name="showPhonePublic"
                           checked={formData.showPhonePublic === true}
                           onChange={() =>
-                            setFormData({ ...formData, showPhonePublic: true })
+                            setFormData((prev) => ({
+                              ...prev,
+                              showPhonePublic: true,
+                            }))
                           }
                           className="text-[#891737] focus:ring-[#891737]"
                         />
                         <span className="text-xs text-gray-700">Yes</span>
                       </label>
+
                       <label className="flex items-center gap-1.5 cursor-pointer">
                         <input
                           type="radio"
                           name="showPhonePublic"
                           checked={formData.showPhonePublic === false}
                           onChange={() =>
-                            setFormData({ ...formData, showPhonePublic: false })
+                            setFormData((prev) => ({
+                              ...prev,
+                              showPhonePublic: false,
+                            }))
                           }
                           className="text-[#891737] focus:ring-[#891737]"
                         />
@@ -1943,18 +2009,36 @@ export const EditProfileModal = ({
                     </div>
                   </div>
                 </div>
+
+                {/* ✅ DOB: calendar max date = today-8y and show age */}
                 <div>
-                  <label className="block text-sm font-medium mb-1">
-                    DOB *
-                  </label>
-                  <input
-                    type="date"
-                    name="dob"
-                    value={formData.dob}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:border-[#891737]"
-                  />
+                  <label className="block text-sm font-medium mb-1">DOB *</label>
+
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="date"
+                      name="dob"
+                      value={formData.dob}
+                      onChange={handleChange}
+                      max={getMaxDobDate()}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:border-[#891737]"
+                    />
+
+                    {formData.dob && (
+                      <span className="text-xs text-gray-600 whitespace-nowrap">
+                        Age:{" "}
+                        <span className="font-semibold">
+                          {calcAge(formData.dob)}
+                        </span>
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="text-[11px] text-gray-500 mt-1">
+                    Minimum age: 8 years
+                  </p>
                 </div>
+
                 <div>
                   <label className="block text-sm font-medium mb-1">
                     Gender *
@@ -1971,6 +2055,7 @@ export const EditProfileModal = ({
                     <option value="Other">Other</option>
                   </select>
                 </div>
+
                 <div className="md:col-span-2">
                   <label className="block text-sm font-medium mb-1">
                     Address *
@@ -1996,6 +2081,7 @@ export const EditProfileModal = ({
             >
               Cancel
             </button>
+
             <button
               type="submit"
               disabled={isSubmitting}
@@ -2018,6 +2104,7 @@ export const EditProfileModal = ({
     </div>
   );
 };
+
 const normalizeList = (list) =>
   list?.map((item) =>
     typeof item === "object" ? item.name || item.link || item.url || "" : item,
