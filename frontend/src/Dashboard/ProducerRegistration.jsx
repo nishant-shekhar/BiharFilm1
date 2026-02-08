@@ -3,6 +3,7 @@ import api from "../Components/axios";
 import { validateFile } from "../utils/fileValidation";
 import { AlertCircle, ArrowRight, CheckCircle2 } from "lucide-react";
 import UniversalPreviewModal from "./UniversalPreviewModal";
+import AlertBox from "../Components/AlertBox";
 
 const ProducerRegistration = ({ onSuccess }) => {
   const [formData, setFormData] = useState({
@@ -48,6 +49,7 @@ const ProducerRegistration = ({ onSuccess }) => {
   const [saveStatus, setSaveStatus] = useState("idle");
   const [validationErrors, setValidationErrors] = useState({});
   const [showPreview, setShowPreview] = useState(false);
+  const [showSuccessAlert, setShowSuccessAlert] = useState(false);
 
   // Company type options
   const companyTypeOptions = [
@@ -384,6 +386,7 @@ const ProducerRegistration = ({ onSuccess }) => {
         setActiveStep(1);
         // Redirect to Overview
         if (onSuccess) onSuccess();
+        setShowSuccessAlert(true);
       }, 2000);
     } catch (err) {
       console.error("❌ Error submitting form:", err);
@@ -985,6 +988,23 @@ const ProducerRegistration = ({ onSuccess }) => {
         data={formData}
         title="PRODUCER REGISTRATION FORM"
         isSubmitting={saveStatus === "saving"}
+      />
+
+      {/* SUCCESS ALERT */}
+      <AlertBox
+        isOpen={showSuccessAlert}
+        onClose={() => {
+          setShowSuccessAlert(false);
+          window.location.reload();
+        }}
+        onConfirm={() => {
+          setShowSuccessAlert(false);
+          window.location.reload();
+        }}
+        type="success"
+        title="Registration Successful"
+        message="Your producer registration form is filled successfully. Please refresh the page once."
+        confirmText="Refresh Page"
       />
     </div>
   );

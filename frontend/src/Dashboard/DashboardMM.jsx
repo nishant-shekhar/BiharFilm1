@@ -11,8 +11,7 @@ import {
   MdLocationOn,
   MdPeople,
   MdWork,
-} from "react-icons/md"; // Keeping these as fallback or unused, but primarily switching to lucide
-// Actually, let's just stick to Lucide for the sidebars as requested.
+} from "react-icons/md";
 import {
   LayoutDashboard,
   Palette,
@@ -59,6 +58,7 @@ const Dashboard = () => {
 
   const [activeSection, setActiveSection] = useState("Overview");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [adminUser, setAdminUser] = useState({ name: "", email: "" }); // State for admin user info
   const [nocStats, setNocStats] = useState({
     total: 0,
     approved: 0,
@@ -140,11 +140,48 @@ const Dashboard = () => {
   };
 
   useEffect(() => {
+    const fetchAdminProfile = async () => {
+      try {
+        const response = await api.get("/api/auth/me");
+        if (response.data.success && response.data.user) {
+          setAdminUser({
+            name: response.data.user.name,
+            email: response.data.user.email,
+          });
+        }
+      } catch (error) {
+        console.error("Failed to fetch admin profile:", error);
+      }
+    };
+
+    fetchAdminProfile();
+  }, []);
+
+  useEffect(() => {
     const fetchNocStats = async () => {
       try {
         const { data } = await api.get("/api/adminApplication/allApplications");
 
-        const applications = data.data || [];
+        const applications = (data.data || []).filter((item) => {
+          const forms = item.forms || {};
+          const steps = item.steps || {}; // ✅ Changed from progress to steps
+
+          const isAnnexure1Done =
+            steps.annexureOneSubmitted || !!forms.annexureOne; // ✅ Changed field name
+          const isAnnexure2Done = steps.nocFormSubmitted || !!forms.nocForm; // ✅ Changed field name
+          const isUndertakingDone =
+            steps.undertakingSubmitted || !!forms.undertaking; // ✅ Changed field name
+
+          // Check Annexure A using steps.annexureAFilledOrNot boolean flag
+          const isAnnexureADone = steps.annexureAFilledOrNot === true;
+
+          return (
+            isAnnexure1Done &&
+            isAnnexure2Done &&
+            isAnnexureADone &&
+            isUndertakingDone
+          );
+        });
 
         const stats = {
           total: applications.length,
@@ -359,14 +396,14 @@ const Dashboard = () => {
 
           <div className="mt-4 px-1 flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-rose-100 border border-rose-200 flex items-center justify-center text-rose-700 font-bold text-xs">
-              AD
+              {adminUser.name ? adminUser.name.charAt(0).toUpperCase() : "A"}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-[12px] font-bold text-gray-900 truncate">
-                Admin User
+                {adminUser.name || "Admin User"}
               </p>
               <p className="text-[10px] text-gray-400 truncate">
-                admin@bsfdfc.com
+                {adminUser.email || "admin@bsfdfc.com"}
               </p>
             </div>
           </div>

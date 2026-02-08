@@ -668,9 +668,6 @@ const UserDashboard = () => {
                       {/* List of Applications */}
                       <div className="space-y-3">
                         {nocList.map((app, index) => {
-                          // Ensure we have a unique ID reference.
-                          // If both IDs are missing, we can't reliably select, so we fallback to index prefixed (risk of instability if list reorders, but better than all-active).
-                          //Ideally backend guarantees _id.
                           const appId =
                             app.applicationId || app._id || `temp-${index}`;
 
@@ -692,31 +689,62 @@ const UserDashboard = () => {
                           const appStatus = app.status || "PENDING";
                           const badgeClass =
                             statusColors[appStatus.toUpperCase()] ||
-                            "bg-gray-100 text-gray-600 border-gray-200";
+                            "bg-green-200 text-green-800 border-green-200";
 
                           return (
                             <div key={appId} className="relative group">
                               {/* Application Header (Accordion) */}
                               <button
                                 onClick={() => {
-                                  setExpandedAppId(
-                                    isAppExpanded ? null : appId,
-                                  );
+                                  const isExpanding = !isAppExpanded;
+                                  setExpandedAppId(isExpanding ? appId : null);
                                   setSelectedAppId(appId);
                                 }}
                                 className={`w-full flex items-center justify-between text-xs font-medium py-2 px-2 rounded-lg transition-colors ${isAppSelected ? "bg-rose-50 text-rose-700" : "text-gray-600 hover:bg-gray-50"}`}
                               >
                                 <div className="flex flex-col items-start gap-0.5 overflow-hidden">
                                   <span className="truncate font-bold text-[11px]">
-                                    {app.applicationId
-                                      ? `#${app.applicationId}`
-                                      : `Application ${index + 1}`}
+                                    {app.applicationNumber ||
+                                      (app.applicationId
+                                        ? `#${app.applicationId}`
+                                        : `Application ${index + 1}`)}
                                   </span>
-                                  <span
-                                    className={`text-[9px] px-1.5 py-0.5 rounded-full border uppercase tracking-wider ${badgeClass}`}
-                                  >
-                                    {appStatus}
-                                  </span>
+                                  {(() => {
+                                    // Check if all forms are filled to show "SUBMITTED" or current status
+                                    const forms = app.forms || {};
+                                    const progress = app.progress || {};
+
+                                    const isAnnexure1Done =
+                                      progress.annexureOneCompleted ||
+                                      !!forms.annexureOne;
+                                    const isAnnexure2Done =
+                                      progress.nocFormCompleted ||
+                                      !!forms.nocForm;
+                                    const isUndertakingDone =
+                                      progress.undertakingUploaded ||
+                                      !!forms.undertaking;
+
+                                    // Check Annexure A using progress.annexureAFilledOrNot boolean
+                                    const isAnnexureADone =
+                                      progress.annexureAFilledOrNot === true;
+
+                                    const allDone =
+                                      isAnnexure1Done &&
+                                      isAnnexure2Done &&
+                                      isAnnexureADone &&
+                                      isUndertakingDone;
+
+                                    if (allDone) {
+                                      return (
+                                        <span
+                                          className={`text-[9px] px-1.5 py-0.5 rounded-full border uppercase tracking-wider ${badgeClass}`}
+                                        >
+                                          {appStatus}
+                                        </span>
+                                      );
+                                    }
+                                    return null;
+                                  })()}
                                 </div>
                                 {isAppExpanded ? (
                                   <ChevronDown
@@ -755,13 +783,9 @@ const UserDashboard = () => {
                                         progress.nocFormCompleted ||
                                         !!app.forms?.nocForm;
                                     if (subItem.name === "Annexure A") {
-                                      const annexureAData =
-                                        app.forms?.nocForm?.data?.annexureA ||
-                                        app.forms?.nocForm?.annexureA;
+                                      // Check using progress.annexureAFilledOrNot boolean flag
                                       isCompleted =
-                                        !!app.isAnnexureAFilled ||
-                                        (Array.isArray(annexureAData) &&
-                                          annexureAData.length > 0);
+                                        progress.annexureAFilledOrNot === true;
                                     }
                                     if (subItem.name === "Undertaking")
                                       isCompleted =
@@ -802,29 +826,35 @@ const UserDashboard = () => {
                                             }
                                           }}
                                         >
-                                          <div className="flex items-center gap-2">
+                                          <div className="flex items-center gap-2 overflow-hidden flex-1">
                                             <subItem.icon
                                               size={14}
                                               strokeWidth={
                                                 isActiveSub ? 2 : 1.5
                                               }
-                                              className={
+                                              className={`flex-shrink-0 ${
                                                 isCompleted
                                                   ? "text-green-600"
                                                   : ""
-                                              }
+                                              }`}
                                             />
                                             <span className="truncate">
                                               {subItem.name}
                                             </span>
                                           </div>
 
-                                          {isCompleted && (
-                                            <Check
-                                              size={14}
-                                              className="text-green-500 font-bold"
-                                              strokeWidth={3}
-                                            />
+                                          {isCompleted ? (
+                                            <div className="flex items-center gap-1 bg-green-50 px-1.5 py-0.5 rounded-full text-[7px] text-green-700 font-medium ">
+                                              <Check
+                                                size={10}
+                                                strokeWidth={3}
+                                              />
+                                              <span>Done</span>
+                                            </div>
+                                          ) : (
+                                            <span className="bg-red-100 text-red-500 px-1.5 py-0.5 rounded-full text-[7px] font-medium">
+                                              Pending
+                                            </span>
                                           )}
                                         </button>
                                       </li>
@@ -895,7 +925,13 @@ const UserDashboard = () => {
                 <span className="text-rose-600">{userName || "User"}</span>
               </p>
               <p className="text-[10px] text-gray-400 font-medium uppercase tracking-wider">
-                {userRole === "filmmaker" ? "Producer" : "Guest"}
+                {userRole === "filmmaker"
+                  ? "Producer"
+                  : userRole === "artist"
+                    ? "Artist"
+                    : userRole === "vendor"
+                      ? "Vendor"
+                      : "Guest"}
               </p>
             </div>
 

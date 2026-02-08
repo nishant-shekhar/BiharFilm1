@@ -9,6 +9,7 @@ import {
   AlertCircle,
   Filter,
   X,
+  Loader2,
 } from "lucide-react";
 import UniversalFormModal from "./UniversalFormModal";
 
@@ -135,6 +136,7 @@ const DEPARTMENTS = [
 
 function Dashboardactivity({ searchQuery }) {
   const [selectedRow, setSelectedRow] = useState(null);
+  const [loadingRowId, setLoadingRowId] = useState(null); // Track which row is loading
   const [showModal, setShowModal] = useState(false);
   const [showForwardModal, setShowForwardModal] = useState(false);
 
@@ -152,6 +154,8 @@ function Dashboardactivity({ searchQuery }) {
   const [statusFilter, setStatusFilter] = useState("all");
   const [dateFromFilter, setDateFromFilter] = useState("");
   const [dateToFilter, setDateToFilter] = useState("");
+
+  const [districtFilter, setDistrictFilter] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
 
   // --- HELPER: Add/Remove Logic ---
@@ -239,10 +243,52 @@ function Dashboardactivity({ searchQuery }) {
         }
       } else if (dateFromFilter || dateToFilter) matchesDate = false;
 
-      return matchesSearch && matchesStatus && matchesDate;
+      // 4. Form Completion Filter (MANDATORY)
+      // Only show applications where all forms are filled
+      const forms = item.forms || {};
+      const steps = item.steps || {}; // ✅ Changed from progress to steps
+
+      const isAnnexure1Done = steps.annexureOneSubmitted || !!forms.annexureOne; // ✅ Changed field name
+      const isAnnexure2Done = steps.nocFormSubmitted || !!forms.nocForm; // ✅ Changed field name
+      const isUndertakingDone =
+        steps.undertakingSubmitted || !!forms.undertaking; // ✅ Changed field name
+
+      // Check Annexure A using steps.annexureAFilledOrNot boolean flag
+      const isAnnexureADone = steps.annexureAFilledOrNot === true;
+
+      const allFormsDone =
+        isAnnexure1Done &&
+        isAnnexure2Done &&
+        isAnnexureADone &&
+        isUndertakingDone;
+
+      // 6. District Filter
+      let matchesDistrict = true;
+      if (districtFilter !== "all") {
+        const districts = item.districts || [];
+        const hasDistrict = districts.some(
+          (d) => d.districtId === districtFilter || d.id === districtFilter,
+        );
+
+        // Fallback: Check annexure locations
+        if (!hasDistrict) {
+          const loc = item.annexureOne?.shootingLocation || "";
+
+          if (!loc.includes(districtFilter)) {
+            matchesDistrict = false;
+          }
+        }
+      }
+
+      return (
+        matchesSearch &&
+        matchesStatus &&
+        matchesDate &&
+        allFormsDone &&
+        matchesDistrict
+      );
     })
     .sort((a, b) => {
-      // 4. PRIORITY SORTING: Pending (Submitted/Forwarded) first, then others
       const getPriority = (status) => {
         const s = status?.toLowerCase();
         if (s === "submitted") return 1;
@@ -257,7 +303,6 @@ function Dashboardactivity({ searchQuery }) {
         return priorityA - priorityB;
       }
 
-      // Within same priority, newest first
       return new Date(b.createdAt) - new Date(a.createdAt);
     });
 
@@ -304,24 +349,28 @@ function Dashboardactivity({ searchQuery }) {
   };
 
   // --- DATA FETCHING ---
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const response = await api.get("/api/adminApplication/allApplications");
+      setCases(response.data.data || []);
+    } catch (err) {
+      console.error("❌ Failed to fetch NOC forms:", err);
+      setError("Unable to load applications.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        const response = await api.get("/api/adminApplication/allApplications");
-        setCases(response.data.data || []);
-      } catch (err) {
-        console.error("❌ Failed to fetch NOC forms:", err);
-        setError("Unable to load applications.");
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchData();
   }, []);
 
   const handleRowClick = async (caseDetail) => {
+    if (loadingRowId) return; // Prevent multiple clicks
+
     try {
+      setLoadingRowId(caseDetail.id);
       const response = await api.get(
         `/api/adminApplication/applications/${caseDetail.id}/details`,
       );
@@ -331,6 +380,8 @@ function Dashboardactivity({ searchQuery }) {
       }
     } catch (error) {
       alert("Error loading details");
+    } finally {
+      setLoadingRowId(null);
     }
   };
 
@@ -358,7 +409,6 @@ function Dashboardactivity({ searchQuery }) {
     }
   };
 
-  // ✅ FIXED: Handle Forward with Correct API Structure
   const handleConfirmForward = async () => {
     if (!selectedRow) return;
 
@@ -455,63 +505,76 @@ function Dashboardactivity({ searchQuery }) {
             {filteredCases.length} applications
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setShowFilters(!showFilters)}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50"
-          >
-            <Filter size={16} /> Filters
-          </button>
-          <button
-            onClick={() => window.location.reload()}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#891737] rounded-lg hover:bg-[#891737]/90"
-          >
-            <RefreshCw size={16} /> Refresh
-          </button>
-        </div>
       </div>
 
-      {/* Filters Panel */}
-      {showFilters && (
-        <div className="bg-white border border-gray-100 rounded-xl p-5 mb-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="text-xs font-medium text-gray-700">Status</label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full mt-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#891737] outline-none transition-all"
-            >
-              <option value="all">All Status</option>
-              <option value="submitted">New/Submitted</option>
-              <option value="forwarded">Forwarded</option>
-              <option value="pending">Total Pending</option>
-              <option value="approved">Approved</option>
-              <option value="rejected">Rejected</option>
-              <option value="finalApproved">Final Approved</option>
-            </select>
-          </div>
-          <div>
-            <label className="text-xs font-medium text-gray-700">
-              From Date
-            </label>
-            <input
-              type="date"
-              value={dateFromFilter}
-              onChange={(e) => setDateFromFilter(e.target.value)}
-              className="w-full mt-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#891737] outline-none transition-all"
-            />
-          </div>
-          <div>
-            <label className="text-xs font-medium text-gray-700">To Date</label>
-            <input
-              type="date"
-              value={dateToFilter}
-              onChange={(e) => setDateToFilter(e.target.value)}
-              className="w-full mt-1 px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-[#891737] outline-none transition-all"
-            />
+      {/* Dropdown Filters & Controls */}
+      <div className="flex items-center gap-3 flex-wrap">
+        {/* Status Dropdown */}
+        <div className="relative">
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="appearance-none bg-white border border-gray-200 px-4 py-2 pr-8 rounded-lg text-sm font-medium text-gray-700 outline-none focus:border-[#891737] focus:ring-1 focus:ring-[#891737] transition-all cursor-pointer"
+          >
+            <option value="all">All Status</option>
+            <option value="submitted">New</option>
+            <option value="forwarded">Forwarded</option>
+            <option value="pending">Pending</option>
+            <option value="approved">Approved</option>
+            <option value="finalApproved">Final Approved</option>
+            <option value="rejected">Rejected</option>
+          </select>
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+            <Filter size={14} />
           </div>
         </div>
-      )}
+
+        {/* District Filter */}
+        <div className="relative">
+          <select
+            value={districtFilter}
+            onChange={(e) => setDistrictFilter(e.target.value)}
+            className="appearance-none bg-white border border-gray-200 px-4 py-2 pr-8 rounded-lg text-sm font-medium text-gray-700 outline-none focus:border-[#891737] focus:ring-1 focus:ring-[#891737] transition-all cursor-pointer max-w-[150px]"
+          >
+            <option value="all">All Districts</option>
+            {BIHAR_DISTRICTS.map((dist) => (
+              <option key={dist.id} value={dist.id}>
+                {dist.name}
+              </option>
+            ))}
+          </select>
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-500">
+            <Filter size={14} />
+          </div>
+        </div>
+
+        {/* Date Range Dropdown (Simple implementation) */}
+        <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-2 py-1.5">
+          <span className="text-xs text-gray-400 font-medium pl-1">Date:</span>
+          <input
+            type="date"
+            value={dateFromFilter}
+            onChange={(e) => setDateFromFilter(e.target.value)}
+            className="text-xs text-gray-700 outline-none border-0 p-0 focus:ring-0"
+            placeholder="From"
+          />
+          <span className="text-gray-300">-</span>
+          <input
+            type="date"
+            value={dateToFilter}
+            onChange={(e) => setDateToFilter(e.target.value)}
+            className="text-xs text-gray-700 outline-none border-0 p-0 focus:ring-0"
+            placeholder="To"
+          />
+        </div>
+
+        <button
+          onClick={() => fetchData()}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#891737] rounded-lg hover:bg-[#891737]/90 transition-all ml-auto"
+        >
+          <RefreshCw size={16} /> Refresh
+        </button>
+      </div>
 
       {/* Table UI */}
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
@@ -540,61 +603,89 @@ function Dashboardactivity({ searchQuery }) {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100 italic">
-                {filteredCases.map((row) => {
-                  const status = getStatusInfo(row.status);
-                  const projectTitle =
-                    row.annexureOne?.titleOfProject ||
-                    row.nocForm?.title ||
-                    "N/A";
-                  const projectType =
-                    row.annexureOne?.typeOfProject ||
-                    row.nocForm?.typeOfProject ||
-                    "N/A";
+                {filteredCases.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" className="py-12 text-center">
+                      <div className="flex flex-col items-center justify-center text-gray-400">
+                        <div className="bg-gray-50 p-4 rounded-full mb-3">
+                          <Filter size={24} className="text-gray-300" />
+                        </div>
+                        <p className="text-sm font-medium text-gray-500">
+                          No applications found
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredCases.map((row) => {
+                    const status = getStatusInfo(row.status);
+                    const projectTitle =
+                      row.annexureOne?.titleOfProject ||
+                      row.nocForm?.title ||
+                      "N/A";
+                    const projectType =
+                      row.annexureOne?.typeOfProject ||
+                      row.nocForm?.typeOfProject ||
+                      "N/A";
 
-                  return (
-                    <tr
-                      key={row.id}
-                      onClick={() => handleRowClick(row)}
-                      className="hover:bg-gray-50/50 cursor-pointer transition-colors group"
-                    >
-                      <td className="px-5 py-4">
-                        <span className="font-mono text-[11px] font-bold text-gray-900 bg-gray-50 px-2 py-1 rounded border border-gray-100 group-hover:border-[#891737]/20 group-hover:text-[#891737] transition-all">
-                          {row.applicationNumber}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4">
-                        <div className="text-xs font-bold text-gray-900 line-clamp-1 truncate max-w-[200px]">
-                          {projectTitle}
-                        </div>
-                      </td>
-                      <td className="px-5 py-4">
-                        <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tight">
-                          {projectType}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4">
-                        <div className="text-xs font-medium text-gray-700">
-                          {row.filmmaker?.name}
-                        </div>
-                      </td>
-                      <td className="px-5 py-4 text-xs font-medium text-gray-400">
-                        {new Date(row.createdAt).toLocaleDateString("en-IN", {
-                          day: "2-digit",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </td>
-                      <td className="px-5 py-4">
-                        <div
-                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-widest ${status.color}`}
-                        >
-                          {status.icon}
-                          {status.label}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                    return (
+                      <tr
+                        key={row.id}
+                        onClick={() => handleRowClick(row)}
+                        className={`hover:bg-gray-50/50 cursor-pointer transition-colors group ${
+                          loadingRowId === row.id
+                            ? "bg-gray-50/80 pointer-events-none opacity-70"
+                            : ""
+                        }`}
+                      >
+                        <td className="px-5 py-4">
+                          {loadingRowId === row.id ? (
+                            <div className="flex items-center gap-2">
+                              <Loader2 className="h-4 w-4 animate-spin text-[#891737]" />
+                              <span className="text-xs font-medium text-gray-500">
+                                Loading...
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="font-mono text-[11px] font-bold text-gray-900 bg-gray-50 px-2 py-1 rounded border border-gray-100 group-hover:border-[#891737]/20 group-hover:text-[#891737] transition-all">
+                              {row.applicationNumber}
+                            </span>
+                          )}
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="text-xs font-bold text-gray-900 line-clamp-1 truncate max-w-[200px]">
+                            {projectTitle}
+                          </div>
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tight">
+                            {projectType}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4">
+                          <div className="text-xs font-medium text-gray-700">
+                            {row.filmmaker?.name}
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 text-xs font-medium text-gray-400">
+                          {new Date(row.createdAt).toLocaleDateString("en-IN", {
+                            day: "2-digit",
+                            month: "short",
+                            year: "numeric",
+                          })}
+                        </td>
+                        <td className="px-5 py-4">
+                          <div
+                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-widest ${status.color}`}
+                          >
+                            {status.icon}
+                            {status.label}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>

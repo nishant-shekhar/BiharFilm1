@@ -1621,7 +1621,6 @@ export const ExperienceCard = ({ artist, onUpdate }) => {
   );
 };
 
-
 // ✅ helpers for requested changes
 const MAX_PHONE_DIGITS = 12;
 
@@ -1765,7 +1764,7 @@ export const EditProfileModal = ({
       !formData.address
     ) {
       alert(
-        "Please fill all required fields (Name, Email, Phone, DOB, Gender, Address)."
+        "Please fill all required fields (Name, Email, Phone, DOB, Gender, Address).",
       );
       setIsSubmitting(false);
       return;
@@ -1805,15 +1804,15 @@ export const EditProfileModal = ({
           [];
         const cleanSpecializations =
           base.specializations?.map((s) =>
-            typeof s === "object" ? s.name : s
+            typeof s === "object" ? s.name : s,
           ) || [];
         const cleanVideoLinks =
           base.videoLinks?.map((v) =>
-            typeof v === "object" ? v.link || v.url : v
+            typeof v === "object" ? v.link || v.url : v,
           ) || [];
         const cleanGallery =
           base.galleryImages?.map((img) =>
-            typeof img === "object" ? img.url || img.link : img
+            typeof img === "object" ? img.url || img.link : img,
           ) || [];
 
         data.append("professions", JSON.stringify(cleanProfessions));
@@ -2012,7 +2011,9 @@ export const EditProfileModal = ({
 
                 {/* ✅ DOB: calendar max date = today-8y and show age */}
                 <div>
-                  <label className="block text-sm font-medium mb-1">DOB *</label>
+                  <label className="block text-sm font-medium mb-1">
+                    DOB *
+                  </label>
 
                   <div className="flex items-center gap-3">
                     <input

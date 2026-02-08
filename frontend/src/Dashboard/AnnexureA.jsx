@@ -27,9 +27,31 @@ const schema = z
       errorMap: () => ({ message: "Please select a location type" }),
     }),
 
-    startDateTime: z.string().min(1, "Start date and time is required"),
+    startDateTime: z
+      .string()
+      .min(1, "Start date and time is required")
+      .refine(
+        (val) => {
+          const selectedDate = new Date(val);
+          const now = new Date();
+          // Allow selection of current minute (ignore seconds/milliseconds for comparison)
+          // Effectively allow if selected time >= current time - 1 minute logic buffer
+          return selectedDate >= new Date(now.getTime() - 60000);
+        },
+        { message: "Start time cannot be in the past" },
+      ),
 
-    endDateTime: z.string().min(1, "End date and time is required"),
+    endDateTime: z
+      .string()
+      .min(1, "End date and time is required")
+      .refine(
+        (val) => {
+          const selectedDate = new Date(val);
+          const now = new Date();
+          return selectedDate >= new Date(now.getTime() - 60000);
+        },
+        { message: "End time cannot be in the past" },
+      ),
 
     crewPublicInvolvement: z
       .string()
@@ -413,6 +435,22 @@ const AnnextureA = ({ activeApplication }) => {
     }
   };
 
+  const onError = (errors) => {
+    console.error("Validation Errors:", errors);
+    const firstError = Object.values(errors)[0];
+    if (firstError) {
+      alert(`Validation Error: ${firstError.message}`);
+      // Optional: Scroll to error
+      const errorElement = document.querySelector(
+        `[name="${Object.keys(errors)[0]}"]`,
+      );
+      if (errorElement) {
+        errorElement.scrollIntoView({ behavior: "smooth", block: "center" });
+        errorElement.focus();
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen pt-4 pb-12 px-4 sm:px-6 lg:px-8 bg-white font-sans">
       <div className="max-w-5xl mx-auto">
@@ -431,7 +469,7 @@ const AnnextureA = ({ activeApplication }) => {
         </div>
 
         <form
-          onSubmit={handleSubmit(handlePreview)}
+          onSubmit={handleSubmit(handlePreview, onError)}
           className="space-y-8 animate-in fade-in duration-500"
         >
           {/* Section 1: Location Information */}
@@ -477,7 +515,6 @@ const AnnextureA = ({ activeApplication }) => {
               >
                 <input
                   type="datetime-local"
-                  min={currentDateTime}
                   {...register("startDateTime")}
                   className="form-input"
                 />
@@ -490,7 +527,6 @@ const AnnextureA = ({ activeApplication }) => {
               >
                 <input
                   type="datetime-local"
-                  min={currentDateTime}
                   {...register("endDateTime")}
                   className="form-input"
                 />

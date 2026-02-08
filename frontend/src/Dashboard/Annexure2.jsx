@@ -762,6 +762,56 @@ export default function Annexure2Form({ activeApplication, onSubmit }) {
         </div>
       </div>
       <Styles />
+
+      {/* PREVIEW MODAL */}
+      <UniversalPreviewModal
+        isOpen={showPreview}
+        onClose={() => setShowPreview(false)}
+        onConfirm={submitFinal}
+        data={{
+          "Project Details": {
+            "Type of Project": getValues("typeOfProject"),
+            Language: getValues("language"),
+            Genre: getValues("genre"),
+            "Duration (min)": getValues("duration"),
+            Title: getValues("title"),
+            "Director & Cast": getValues("directorAndCast"),
+            Synopsis: getValues("synopsis"),
+          },
+          "Production Info": {
+            "Production House": getValues("productionHouse"),
+            Address: getValues("productionAddress"),
+            Contact: getValues("productionContact"),
+            Email: getValues("productionEmail"),
+            Constitution: getValues("constitution"),
+            "Registration No": getValues("registrationDetails"),
+            Representative: getValues("representativeName"),
+            Designation: getValues("designation"),
+          },
+          "Applicant Info": {
+            Address: getValues("applicantAddress"),
+            Contact: getValues("applicantContact"),
+            Email: getValues("applicantEmail"),
+          },
+          "Shooting Specs": {
+            "Main Artists": getValues("mainArtists"),
+            "Total Locations": getValues("totalLocations"),
+            "Drone Required?": getValues("drone"),
+            "Animals Used?": getValues("animal"),
+            "Fire/Blasting?": getValues("fireScene"),
+            "Temp Structure?": getValues("temporaryStructure"),
+            "Line Producer": getValues("lineProducerDetails") || "N/A",
+            "Police/Security": getValues("policeSecurityDetails") || "N/A",
+            Branding: getValues("brandingDetails") || "N/A",
+          },
+          Declaration: {
+            "Authorized Applicant": getValues("authorizedName"),
+            "Other Particulars": getValues("otherParticulars") || "N/A",
+          },
+        }}
+        title="Application Preview - Annexure 2"
+        isSubmitting={isSubmitting}
+      />
     </div>
   );
 }

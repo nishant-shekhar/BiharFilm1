@@ -17,6 +17,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import UniversalFormModal from "./UniversalFormModal";
 import ApplicationDetailsModal from "./ApplicationDetailsModal";
+import PartialGuideImg from "../assets/partial_forms_guide.png";
 
 const computeLatestDepartments = (events) => {
   const latestByDept = {};
@@ -457,84 +458,151 @@ const FilmmakerOverview = () => {
                         )}
                       </td>
                       <td className="px-6 py-3 text-center">
-                        <div className="flex flex-col items-center gap-1.5">
-                          <span
-                            className={`px-2.5 py-0.5 rounded-full border text-[10px] font-medium uppercase tracking-wide inline-block ${getBadgeColor(
-                              appDetails.status,
-                            )}`}
-                          >
-                            {appDetails.status}
-                          </span>
+                        {(() => {
+                          const forms = appItem.forms || appDetails.forms || {};
+                          const progress =
+                            appItem.progress || appDetails.progress || {};
 
-                          {/* Progress Bar for Processing/Forwarded/Rejected */}
-                          {["PROCESSING", "FORWARDED", "REJECTED"].includes(
-                            appDetails.status?.toUpperCase(),
-                          ) &&
-                            departments.length > 0 && (
-                              <div className="w-24 group relative">
-                                <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden flex">
-                                  {departments.map((dept, i) => {
-                                    let color = "bg-gray-300";
-                                    if (
-                                      ["APPROVED", "ACCEPTED"].includes(
-                                        dept.status,
-                                      )
-                                    )
-                                      color = "bg-green-500";
-                                    if (dept.status === "REJECTED")
-                                      color = "bg-red-500";
-                                    return (
-                                      <div
-                                        key={i}
-                                        className={`h-full flex-1 ${color} border-r border-white last:border-0`}
-                                      />
-                                    );
-                                  })}
-                                </div>
-                                <div className="text-[9px] text-gray-400 mt-0.5 font-medium">
-                                  {
-                                    departments.filter((d) =>
-                                      ["APPROVED", "ACCEPTED"].includes(
-                                        d.status,
-                                      ),
-                                    ).length
-                                  }
-                                  /{departments.length} Approved
-                                </div>
-                              </div>
-                            )}
+                          const isAnnexure1Done =
+                            progress.annexureOneCompleted ||
+                            !!forms.annexureOne;
+                          const isAnnexure2Done =
+                            progress.nocFormCompleted || !!forms.nocForm;
+                          const isUndertakingDone =
+                            progress.undertakingUploaded || !!forms.undertaking;
 
-                          {/* Comment Peeking */}
-                          {(() => {
-                            const relevantDept =
-                              appDetails.status === "REJECTED"
-                                ? departments.find(
-                                    (d) => d.status === "REJECTED",
-                                  )
-                                : departments[0]; // Or latest updated
+                          // Check Annexure A using progress.annexureAFilledOrNot boolean flag
+                          const isAnnexureADone =
+                            progress.annexureAFilledOrNot === true;
 
-                            if (relevantDept?.remarks) {
-                              return (
-                                <div className="absolute top-0 right-0 -mr-2 -mt-2 group/comment">
-                                  <div className="bg-white p-1 rounded-full shadow-sm border border-gray-100 cursor-help">
-                                    <MessageSquare
-                                      size={10}
-                                      className="text-gray-400"
-                                    />
-                                  </div>
-                                  <div className="hidden group-hover/comment:block absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-gray-800 text-white text-[10px] p-2 rounded-lg shadow-xl z-50">
-                                    <div className="font-semibold mb-0.5 text-gray-300">
-                                      {relevantDept.officeName}:
+                          const allDone =
+                            isAnnexure1Done &&
+                            isAnnexure2Done &&
+                            isAnnexureADone &&
+                            isUndertakingDone;
+
+                          if (allDone) {
+                            return (
+                              <div className="flex flex-col items-center gap-1.5">
+                                <span
+                                  className={`px-2.5 py-0.5 rounded-full border text-[10px] font-medium uppercase tracking-wide inline-block ${getBadgeColor(
+                                    appDetails.status,
+                                  )}`}
+                                >
+                                  {appDetails.status || "SUBMITTED"}
+                                </span>
+                                {/* Existing progress bar logic for submitted apps */}
+                                {[
+                                  "PROCESSING",
+                                  "FORWARDED",
+                                  "REJECTED",
+                                ].includes(appDetails.status?.toUpperCase()) &&
+                                  departments.length > 0 && (
+                                    <div className="w-24 group relative">
+                                      <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden flex">
+                                        {departments.map((dept, i) => {
+                                          let color = "bg-gray-300";
+                                          if (
+                                            ["APPROVED", "ACCEPTED"].includes(
+                                              dept.status,
+                                            )
+                                          )
+                                            color = "bg-green-500";
+                                          if (dept.status === "REJECTED")
+                                            color = "bg-red-500";
+                                          return (
+                                            <div
+                                              key={i}
+                                              className={`h-full flex-1 ${color} border-r border-white last:border-0`}
+                                            />
+                                          );
+                                        })}
+                                      </div>
+                                      <div className="text-[9px] text-gray-400 mt-0.5 font-medium">
+                                        {
+                                          departments.filter((d) =>
+                                            ["APPROVED", "ACCEPTED"].includes(
+                                              d.status,
+                                            ),
+                                          ).length
+                                        }
+                                        /{departments.length} Approved
+                                      </div>
                                     </div>
-                                    "{relevantDept.remarks}"
-                                    <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-800 rotate-45"></div>
+                                  )}
+
+                                {/* Comment Peeking */}
+                                {(() => {
+                                  const relevantDept =
+                                    appDetails.status === "REJECTED"
+                                      ? departments.find(
+                                          (d) => d.status === "REJECTED",
+                                        )
+                                      : departments[0]; // Or latest updated
+
+                                  if (relevantDept?.remarks) {
+                                    return (
+                                      <div className="absolute top-0 right-0 -mr-2 -mt-2 group/comment">
+                                        <div className="bg-white p-1 rounded-full shadow-sm border border-gray-100 cursor-help">
+                                          <MessageSquare
+                                            size={10}
+                                            className="text-gray-400"
+                                          />
+                                        </div>
+                                        <div className="hidden group-hover/comment:block absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-gray-800 text-white text-[10px] p-2 rounded-lg shadow-xl z-50">
+                                          <div className="font-semibold mb-0.5 text-gray-300">
+                                            {relevantDept.officeName}:
+                                          </div>
+                                          "{relevantDept.remarks}"
+                                          <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 bg-gray-800 rotate-45"></div>
+                                        </div>
+                                      </div>
+                                    );
+                                  }
+                                  return null;
+                                })()}
+                              </div>
+                            );
+                          } else {
+                            // Detailed Breakdown
+                            const statusList = [
+                              { name: "Annexure 1", done: isAnnexure1Done },
+                              { name: "Annexure 2", done: isAnnexure2Done },
+                              { name: "Annexure A", done: isAnnexureADone },
+                              { name: "Undertaking", done: isUndertakingDone },
+                            ];
+
+                            return (
+                              <div className="flex flex-col gap-1 items-start w-full max-w-[140px] mx-auto">
+                                {statusList.map((item, idx) => (
+                                  <div
+                                    key={idx}
+                                    className="flex items-center gap-1.5 w-full"
+                                  >
+                                    {item.done ? (
+                                      <div className="flex items-center gap-1 bg-green-50 px-1.5 py-0.5 rounded-full text-[9px] text-green-700 font-medium border border-green-100 w-full">
+                                        <CheckCircle2
+                                          size={10}
+                                          strokeWidth={2.5}
+                                        />
+                                        <span className="truncate">
+                                          {item.name}
+                                        </span>
+                                      </div>
+                                    ) : (
+                                      <div className="flex items-center gap-1 bg-gray-100 px-1.5 py-0.5 rounded-full text-[9px] text-gray-500 font-medium border border-gray-200 w-full opacity-70">
+                                        <div className="w-2.5 h-2.5 rounded-full border border-gray-400"></div>
+                                        <span className="truncate">
+                                          {item.name}
+                                        </span>
+                                      </div>
+                                    )}
                                   </div>
-                                </div>
-                              );
-                            }
-                            return null;
-                          })()}
-                        </div>
+                                ))}
+                              </div>
+                            );
+                          }
+                        })()}
                       </td>
                       <td className="px-6 py-3">
                         <div className="flex items-center gap-2">
@@ -706,6 +774,16 @@ const FilmmakerOverview = () => {
                 </p>
               </div>
               <div className="flex gap-4">
+                <span className="shrink-0 px-2.5 py-0.5 rounded-full border border-green-200 bg-green-100 text-green-700 text-[9px] font-bold h-fit mt-1">
+                  SUBMITTED
+                </span>
+                <p className="text-[12px] text-gray-500 leading-relaxed">
+                  All forms (Annexure 1, 2, A, Undertaking) are properly filled
+                  and submitted. Your application is now with the admin for
+                  initial review.
+                </p>
+              </div>
+              <div className="flex gap-4">
                 <span className="shrink-0 px-2.5 py-0.5 rounded-full border border-blue-200 bg-blue-100 text-blue-700 text-[9px] font-bold h-fit mt-1">
                   PENDING
                 </span>
@@ -722,6 +800,30 @@ const FilmmakerOverview = () => {
                   Rejected by a specific department. Check "Current Stage" or
                   details for the exact reason.
                 </p>
+              </div>
+
+              {/* New Partial Information Section */}
+              <div className="pt-4 border-t border-gray-50">
+                <h6 className="text-[11px] font-bold text-gray-600 mb-2">
+                  Partial Information (Action Required)
+                </h6>
+                <p className="text-[11px] text-gray-400 leading-relaxed mb-3">
+                  If a checklist appears in the status column as shown below, it
+                  indicates that{" "}
+                  <strong className="underline text-gray-700">
+                    all required forms have not yet been completed
+                  </strong>
+                  . To successfully submit your application, you must fill out
+                  all four forms: Annexure 1, Annexure 2, Annexure A, and the
+                  Undertaking.
+                </p>
+                <div className="bg-gray-50 p-2 rounded-lg border border-gray-100 inline-block">
+                  <img
+                    src={PartialGuideImg}
+                    alt="Partial Status Example"
+                    className="h-auto w-48 rounded shadow-sm opacity-90"
+                  />
+                </div>
               </div>
             </div>
           </div>

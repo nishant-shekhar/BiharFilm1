@@ -46,7 +46,7 @@ const NOCTimeline = ({ nocForm }) => {
         };
       case "SUBMITTED":
         return {
-          circle: "bg-purple-600 border-purple-600",
+          circle: "bg-purple-900 border-purple-600",
           icon: "text-white",
           text: "text-purple-700",
         };
