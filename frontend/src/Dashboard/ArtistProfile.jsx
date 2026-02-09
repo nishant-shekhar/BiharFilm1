@@ -112,7 +112,13 @@ const ArtistProfile = () => {
   };
 
   const handleUpdate = (updatedArtist) => {
-    setArtist(normalizeArtistData(updatedArtist));
+    console.log("handleUpdate called with:", updatedArtist);
+    // Ensure we don't lose existing data by merging properly
+    const merged = {
+      ...artist, // Keep existing data
+      ...updatedArtist, // Merge updates
+    };
+    setArtist(normalizeArtistData(merged));
     showAlert("success", "Success", "Profile updated successfully!");
   };
 

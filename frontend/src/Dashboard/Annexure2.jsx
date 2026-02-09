@@ -636,23 +636,22 @@ export default function Annexure2Form({ activeApplication, onSubmit }) {
         </Card>
       )}
 
-      {/* STEP 4: Permissions & Uploads */}
       {step === 4 && (
         <Card title="Step 4: Permissions & Declaration">
           <div className="space-y-6">
-            <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-100">
+            <div className="p-4 bg-gray-50 rounded-lg">
               <h3 className="font-semibold text-yellow-800 mb-2">
-                Foreign/International Productions
+                Foreign/International Productions (Optional)
               </h3>
-              <div className="grid md:grid-cols-2 gap-6">
+              <div className="grid md:grid-cols-1 gap-6">
                 <File
-                  label="30. Shoot Permission (MIB) - International Film/Series"
+                  label="30. In case of International Film, Web Series and TV Serials shooting - Enclose shoot Permission Certificate issued by the MIB (Ministry of Information & Broadcasting)"
                   name="mibPermission"
                   register={register}
                   error={errors}
                 />
                 <File
-                  label="31. Shoot Permission (Competent Authority) - Int'l Doc/Music Video"
+                  label="31. In case of International Documentary, AV Commercial and Music Videos shooting - Enclose shoot Permission Certificate issued by the competent authority"
                   name="competentAuthorityPermission"
                   register={register}
                   error={errors}

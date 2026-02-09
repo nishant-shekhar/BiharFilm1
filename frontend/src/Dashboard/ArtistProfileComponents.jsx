@@ -222,7 +222,18 @@ export const VideoLinksCard = ({ artist, onUpdate }) => {
       alert("You can add up to 5 video links.");
       return;
     }
-    if (currentLink && !links.includes(currentLink)) {
+
+    if (!currentLink) return;
+
+    // Validate URL
+    try {
+      new URL(currentLink);
+    } catch (_) {
+      alert("Please enter a valid URL (must start with http:// or https://)");
+      return;
+    }
+
+    if (!links.includes(currentLink)) {
       setLinks([...links, currentLink]);
       setCurrentLink("");
     }
@@ -515,6 +526,34 @@ export const BioDataCard = ({ artist, onUpdate }) => {
 // ----------------------------------------------------------------------
 // COMPONENT: Social Media Card
 // ----------------------------------------------------------------------
+const getSmartUrl = (platform, value) => {
+  if (!value) return "";
+  let clean = value.trim();
+  if (clean.startsWith("http://") || clean.startsWith("https://")) return clean;
+
+  // If it has domain of the platform, prepend https
+  const domains = {
+    instagram: "instagram.com",
+    facebook: "facebook.com",
+    twitter: "twitter.com",
+    linkedIn: "linkedin.com",
+    imdbLink: "imdb.com",
+  };
+  if (domains[platform] && clean.includes(domains[platform])) {
+    return clean.startsWith("www.") ? `https://${clean}` : `https://${clean}`;
+  }
+
+  // Else treat as handle
+  const prefixes = {
+    instagram: "https://instagram.com/",
+    facebook: "https://facebook.com/",
+    twitter: "https://twitter.com/",
+    linkedIn: "https://linkedin.com/in/",
+    imdbLink: "https://imdb.com/name/",
+  };
+  return prefixes[platform] ? `${prefixes[platform]}${clean}` : clean;
+};
+
 export const SocialMediaCard = ({ artist, onUpdate }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [socials, setSocials] = useState({
@@ -539,7 +578,15 @@ export const SocialMediaCard = ({ artist, onUpdate }) => {
   const handleSave = async () => {
     setLoading(true);
     try {
-      const res = await updateProfile(artist, socials);
+      const processedSocials = {
+        facebook: getSmartUrl("facebook", socials.facebook),
+        twitter: getSmartUrl("twitter", socials.twitter),
+        instagram: getSmartUrl("instagram", socials.instagram),
+        linkedIn: getSmartUrl("linkedIn", socials.linkedIn),
+        imdbLink: getSmartUrl("imdbLink", socials.imdbLink),
+      };
+
+      const res = await updateProfile(artist, processedSocials);
       onUpdate(res.data.data);
       setIsEditing(false);
     } catch (e) {
@@ -608,7 +655,7 @@ export const SocialMediaCard = ({ artist, onUpdate }) => {
         {/* Render Logic - similar to original but using helper map if cleaner, or keep explicitly */}
         {socials.facebook && (
           <a
-            href={socials.facebook}
+            href={getSmartUrl("facebook", socials.facebook)}
             target="_blank"
             className="aspect-square rounded-xl bg-[#1877F2]/5 text-[#891737] hover:bg-[#1877F2] hover:text-white flex items-center justify-center transition-all"
           >
@@ -617,7 +664,7 @@ export const SocialMediaCard = ({ artist, onUpdate }) => {
         )}
         {socials.twitter && (
           <a
-            href={socials.twitter}
+            href={getSmartUrl("twitter", socials.twitter)}
             target="_blank"
             className="aspect-square rounded-xl bg-[#1DA1F2]/5 text-[#891737] hover:bg-[#1DA1F2] hover:text-white flex items-center justify-center transition-all"
           >
@@ -626,7 +673,7 @@ export const SocialMediaCard = ({ artist, onUpdate }) => {
         )}
         {socials.instagram && (
           <a
-            href={socials.instagram}
+            href={getSmartUrl("instagram", socials.instagram)}
             target="_blank"
             className="aspect-square rounded-xl bg-[#E4405F]/5 text-[#891737] hover:bg-[#E4405F] hover:text-white flex items-center justify-center transition-all"
           >
@@ -635,7 +682,7 @@ export const SocialMediaCard = ({ artist, onUpdate }) => {
         )}
         {socials.linkedIn && (
           <a
-            href={socials.linkedIn}
+            href={getSmartUrl("linkedIn", socials.linkedIn)}
             target="_blank"
             className="aspect-square rounded-xl bg-[#0A66C2]/5 text-[#891737] hover:bg-[#0A66C2] hover:text-white flex items-center justify-center transition-all"
           >
@@ -644,7 +691,7 @@ export const SocialMediaCard = ({ artist, onUpdate }) => {
         )}
         {socials.imdbLink && (
           <a
-            href={socials.imdbLink}
+            href={getSmartUrl("imdbLink", socials.imdbLink)}
             target="_blank"
             className="aspect-square rounded-xl bg-[#F5C518]/10 text-[#891737] hover:bg-[#F5C518] hover:text-white flex items-center justify-center transition-all"
           >
@@ -1006,7 +1053,7 @@ export const GalleryCard = ({ artist, onUpdate }) => {
     setExisting(clean);
     setNewFiles([]);
     setPreviews([]);
-  }, [artist]);
+  }, [artist, artist.galleryImages]); // ✅ Added specific dependency
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
@@ -1042,8 +1089,8 @@ export const GalleryCard = ({ artist, onUpdate }) => {
       // Backend expects "galleryImages" to contain the whitelist of URLs to keep
       // If empty, send "[]"
       data.append("galleryImages", JSON.stringify(cleanExisting));
-
-      newFiles.forEach((f) => data.append("galleryImages", f));
+      // Append new files with field name "galleryFiles" (different from the JSON)
+      newFiles.forEach((f) => data.append("galleryFiles", f));
 
       // Append other fields to ensure profile consistency, though ideally backend handles partial updates
       [
@@ -1091,9 +1138,14 @@ export const GalleryCard = ({ artist, onUpdate }) => {
 
       // Robust update handling
       if (res.data && res.data.data) {
+        alert("Gallery updated successfully!"); // ✅ Added success feedback
         onUpdate(res.data.data);
+        // ✅ Clean up local state
+        setNewFiles([]);
+        setPreviews([]);
       } else {
         // Fallback if backend doesn't return data
+        alert("Gallery updated! Refreshing...");
         window.location.reload();
       }
       setIsEditing(false);
@@ -1319,6 +1371,11 @@ export const ExperienceCard = ({ artist, onUpdate }) => {
       alert("Please fill required fields (Title, Role, Start Date)");
       return;
     }
+
+    if (newExp.durationTo && newExp.durationFrom > newExp.durationTo) {
+      alert("Start date cannot be after end date");
+      return;
+    }
     setLoading(true);
 
     try {
@@ -1335,11 +1392,14 @@ export const ExperienceCard = ({ artist, onUpdate }) => {
 
       // If Adding New
       if (editingIndex === null) {
-        const res = await api.post("/api/artist/addExperience", payload);
+        await api.post("/api/artist/addExperience", payload);
 
-        if (res.data && res.data.data) {
-          // If backend returns updated artist
-          onUpdate(res.data.data);
+        // ✅ Re-fetch the profile to get the latest experiences
+        const refreshRes = await api.get(
+          "/api/artist/myProfileWithExperiences",
+        );
+        if (refreshRes.data && refreshRes.data.data) {
+          onUpdate(refreshRes.data.data);
         } else {
           // Fallback
           window.location.reload();
@@ -1359,15 +1419,14 @@ export const ExperienceCard = ({ artist, onUpdate }) => {
         }
 
         // Attempt direct UPDATE endpoint
-        // Try PUT /api/artist/experience/:id
-        const res = await api.put(
-          `/api/artist/updateExperience/${expId}`,
-          payload,
-        );
+        await api.put(`/api/artist/updateExperience/${expId}`, payload);
 
-        if (res.data && res.data.data) {
-          // Assuming backend returns updated artist OR updated experience
-          onUpdate(res.data.data);
+        // ✅ Re-fetch the profile to get the latest experiences
+        const refreshRes = await api.get(
+          "/api/artist/myProfileWithExperiences",
+        );
+        if (refreshRes.data && refreshRes.data.data) {
+          onUpdate(refreshRes.data.data);
         } else {
           // Fallback manual update if response is weird but success
           const updatedList = [...artist.experiences];
@@ -1477,6 +1536,7 @@ export const ExperienceCard = ({ artist, onUpdate }) => {
                   type="date"
                   name="durationTo"
                   value={newExp.durationTo}
+                  min={newExp.durationFrom}
                   onChange={handleChange}
                   className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-200 transition-all"
                 />

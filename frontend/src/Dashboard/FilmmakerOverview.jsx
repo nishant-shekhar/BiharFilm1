@@ -17,7 +17,7 @@ import {
 import { useNavigate } from "react-router-dom";
 import UniversalFormModal from "./UniversalFormModal";
 import ApplicationDetailsModal from "./ApplicationDetailsModal";
-import PartialGuideImg from "../assets/partial_forms_guide.png";
+import PartialGuideImg from "../../public/partial_forms_guide.png";
 
 const computeLatestDepartments = (events) => {
   const latestByDept = {};
