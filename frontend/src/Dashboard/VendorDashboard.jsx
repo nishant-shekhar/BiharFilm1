@@ -49,12 +49,11 @@ const VENDOR_CATEGORIES = [
   "Travel Agents",
   "Generator Services",
   "Security Services",
-
+  "Houses for shooting providers",
   // Added from OLD list (missing)
   "Choreography & Dancers",
   "Still Photography & BTS",
   "Lighting Equipment Suppliers",
-
   "Others",
 ];
 
@@ -108,7 +107,10 @@ const VendorDashboard = () => {
     name: "",
     type: "",
     description: "",
+    description: "",
     price: "",
+    priceFrom: "",
+    priceTo: "",
   });
 
   const [profileFormData, setProfileFormData] = useState({
@@ -241,7 +243,7 @@ const VendorDashboard = () => {
           }
         } else if (response.status === 404 || response.status === 403) {
           console.log(
-            "❌ No vendor profile found (or not authorized as vendor) - showing profile creation"
+            "❌ No vendor profile found (or not authorized as vendor) - showing profile creation",
           );
           setVendorId(null);
           setError(null);
@@ -433,7 +435,7 @@ const VendorDashboard = () => {
         formData,
         {
           validateStatus: () => true,
-        }
+        },
       );
 
       if (response.status >= 200 && response.status < 300) {
@@ -513,10 +515,12 @@ const VendorDashboard = () => {
       formData.append("name", productFormData.name);
       formData.append("type", productFormData.type);
       formData.append("description", productFormData.description);
-      formData.append(
-        "price",
-        productFormData.price ? parseFloat(productFormData.price) : 0
-      );
+      const priceString =
+        productFormData.priceFrom && productFormData.priceTo
+          ? `${productFormData.priceFrom}-${productFormData.priceTo}`
+          : productFormData.price;
+
+      formData.append("price", priceString);
 
       if (productImageFile) {
         formData.append("image", productImageFile);
@@ -529,7 +533,7 @@ const VendorDashboard = () => {
         formData,
         {
           validateStatus: () => true,
-        }
+        },
       );
 
       if (response.status >= 200 && response.status < 300) {
@@ -540,7 +544,7 @@ const VendorDashboard = () => {
           `${API_BASE_URL}/myVendorProfile`,
           {
             validateStatus: () => true,
-          }
+          },
         );
 
         if (refreshResponse.status >= 200 && refreshResponse.status < 300) {
@@ -552,7 +556,14 @@ const VendorDashboard = () => {
           }));
         }
 
-        setProductFormData({ name: "", type: "", description: "", price: "" });
+        setProductFormData({
+          name: "",
+          type: "",
+          description: "",
+          price: "",
+          priceFrom: "",
+          priceTo: "",
+        });
         setProductImagePreview(null);
         setProductImageFile(null);
         setShowAddProductModal(false);
@@ -602,7 +613,7 @@ const VendorDashboard = () => {
       onConfirm: async () => {
         try {
           const response = await api.delete(
-            `${API_BASE_URL_PRODUCTS}/products/${productId}`
+            `${API_BASE_URL_PRODUCTS}/products/${productId}`,
           );
 
           if (response.status >= 200 && response.status < 300) {
@@ -612,7 +623,7 @@ const VendorDashboard = () => {
               `${API_BASE_URL}/myVendorProfile`,
               {
                 validateStatus: () => true,
-              }
+              },
             );
 
             if (refreshResponse.status >= 200 && refreshResponse.status < 300) {
@@ -718,7 +729,7 @@ const VendorDashboard = () => {
 
   const currentProducts = validProducts.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
+    currentPage * ITEMS_PER_PAGE,
   );
 
   const handleNextPage = () => {
@@ -775,7 +786,10 @@ const VendorDashboard = () => {
       name: product.name,
       type: product.type,
       description: product.description,
+      description: product.description,
       price: product.price || "",
+      priceFrom: (product.price || "").toString().split("-")[0] || "",
+      priceTo: (product.price || "").toString().split("-")[1] || "",
     });
     setProductImagePreview(product.imageUrl);
     setShowAddProductModal(true);
@@ -791,10 +805,12 @@ const VendorDashboard = () => {
       formData.append("name", productFormData.name);
       formData.append("type", productFormData.type);
       formData.append("description", productFormData.description);
-      formData.append(
-        "price",
-        productFormData.price ? parseFloat(productFormData.price) : 0
-      );
+      const priceString =
+        productFormData.priceFrom && productFormData.priceTo
+          ? `${productFormData.priceFrom}-${productFormData.priceTo}`
+          : productFormData.price;
+
+      formData.append("price", priceString);
 
       if (productImageFile) {
         formData.append("image", productImageFile);
@@ -805,7 +821,7 @@ const VendorDashboard = () => {
       const response = await api.put(
         `${API_BASE_URL_PRODUCTS}/updateproduct/${editingProduct.id}`,
         formData,
-        { validateStatus: () => true }
+        { validateStatus: () => true },
       );
 
       if (response.status >= 200 && response.status < 300) {
@@ -1123,8 +1139,8 @@ const VendorDashboard = () => {
                     {profileUpdateLoading
                       ? "Saving..."
                       : vendorId
-                      ? "Update"
-                      : "Create"}
+                        ? "Update"
+                        : "Create"}
                   </button>
                 </div>
               </form>
@@ -1194,7 +1210,7 @@ const VendorDashboard = () => {
                         {
                           month: "short",
                           year: "numeric",
-                        }
+                        },
                       )}
                     </span>
                   </div>
@@ -1645,24 +1661,35 @@ const VendorDashboard = () => {
                   />
                 </div>
 
-                {/* Price */}
+                {/* Price Range */}
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-2">
-                    Price (₹){" "}
+                    Price Range (₹){" "}
                     <span className="text-gray-400 text-xs font-normal">
                       Optional
                     </span>
                   </label>
-                  <input
-                    type="number"
-                    name="price"
-                    value={productFormData.price}
-                    onChange={handleProductInputChange}
-                    min="0"
-                    step="0.01"
-                    className="w-full px-3 py-2 text-sm text-gray-900 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-300 transition-colors"
-                    placeholder="0.00"
-                  />
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      name="priceFrom"
+                      value={productFormData.priceFrom}
+                      onChange={handleProductInputChange}
+                      min="0"
+                      className="w-full px-3 py-2 text-sm text-gray-900 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-300 transition-colors"
+                      placeholder="From"
+                    />
+                    <span className="text-gray-400 text-sm">to</span>
+                    <input
+                      type="number"
+                      name="priceTo"
+                      value={productFormData.priceTo}
+                      onChange={handleProductInputChange}
+                      min="0"
+                      className="w-full px-3 py-2 text-sm text-gray-900 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-300 transition-colors"
+                      placeholder="To"
+                    />
+                  </div>
                 </div>
               </div>
 

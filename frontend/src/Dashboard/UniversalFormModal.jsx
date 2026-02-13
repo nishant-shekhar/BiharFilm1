@@ -111,6 +111,8 @@ const UniversalFormModal = ({
     { id: "annexureOne", label: "Annexure 1" },
     { id: "nocForm", label: "Annexure 2" },
     { id: "annexureA", label: "Annexure A" },
+    { id: "documents", label: "Documents" },
+    { id: "synopsis", label: "Synopsis" },
     { id: "undertaking", label: "Undertaking" },
   ];
 
@@ -138,6 +140,15 @@ const UniversalFormModal = ({
       );
     }
     return String(value);
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "—";
+    return new Date(dateStr).toLocaleDateString("en-IN", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
   };
 
   const renderTable = (dataItem, fields) => {
@@ -432,6 +443,193 @@ const UniversalFormModal = ({
           ["Document", "documentUrl"],
           ["Uploaded At", "uploadedAt"],
         ]);
+      case "documents":
+        // Helper to resolve NOC documents object, trying multiple paths
+        const nocDocs =
+          data.forms?.nocDocumentsAndSynopsis?.data ||
+          data.forms?.nocDocumentsAndSynopsis ||
+          data.nocDocumentsAndSynopsis?.data ||
+          data.nocDocumentsAndSynopsis;
+
+        return (
+          <div className="space-y-6">
+            {/* NOC Shooting Permission Documents */}
+            {nocDocs && (
+              <>
+                <h3 className="text-sm font-bold text-gray-900 border-b border-gray-200 pb-2 mb-4">
+                  Shooting Permission Documents
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {[
+                    {
+                      label: "Request Letter",
+                      url: nocDocs.requestLetter,
+                    },
+                    {
+                      label: "Registration Certificate",
+                      url: nocDocs.registrationCertificate,
+                    },
+                    {
+                      label: "Title Registration",
+                      url: nocDocs.titleRegistration,
+                    },
+                  ].map(
+                    (doc, i) =>
+                      doc.url && (
+                        <a
+                          key={`noc-${i}`}
+                          href={doc.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-3 p-3.5 bg-white border border-gray-200/80 rounded-xl hover:border-gray-300 hover:shadow-sm transition-all group"
+                        >
+                          <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center flex-shrink-0 group-hover:bg-blue-100 transition-colors">
+                            <FaExternalLinkAlt
+                              size={14}
+                              className="text-blue-500"
+                            />
+                          </div>
+                          <div className="overflow-hidden">
+                            <h5 className="text-[12px] font-bold text-gray-700 truncate group-hover:text-gray-900">
+                              {doc.label}
+                            </h5>
+                            <span className="text-[10px] text-blue-500 font-medium flex items-center gap-1 mt-0.5">
+                              View Document <FaExternalLinkAlt size={7} />
+                            </span>
+                          </div>
+                        </a>
+                      ),
+                  )}
+                </div>
+                {nocDocs.uploadedAt && (
+                  <p className="text-[10px] text-gray-400 mt-1">
+                    Uploaded: {formatDate(nocDocs.uploadedAt)}
+                    {nocDocs.updatedAt &&
+                      nocDocs.updatedAt !== nocDocs.uploadedAt &&
+                      ` · Updated: ${formatDate(nocDocs.updatedAt)}`}
+                  </p>
+                )}
+              </>
+            )}
+
+            {/* Other Documents */}
+            <h3 className="text-sm font-bold text-gray-900 border-b border-gray-200 pb-2 mb-4 mt-8">
+              Other Documents
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+              {[
+                {
+                  label: "Company ID",
+                  url: data.filmmaker?.producerRegistration
+                    ?.companyIdentificationDocument,
+                },
+                {
+                  label: "PAN Card",
+                  url: data.filmmaker?.producerRegistration?.panDocument,
+                },
+                {
+                  label: "GST Certificate",
+                  url: data.filmmaker?.producerRegistration?.gstCertificate,
+                },
+                {
+                  label: "MIB Certificate",
+                  url: data.forms?.nocForm?.data?.mibCertificate,
+                },
+                {
+                  label: "MEA Certificate",
+                  url: data.forms?.nocForm?.data?.meaCertificate,
+                },
+                {
+                  label: "Undertaking",
+                  url: data.forms?.undertaking?.data?.documentUrl,
+                },
+                {
+                  label: "Request Letter",
+                  url: data.forms?.requestLetter?.data?.documentUrl,
+                },
+                {
+                  label: "Synopsis",
+                  url:
+                    data.forms?.nocDocumentsAndSynopsis?.data?.synopsis ||
+                    data.forms?.nocDocumentsAndSynopsis?.synopsis ||
+                    data.nocDocumentsAndSynopsis?.data?.synopsis ||
+                    data.nocDocumentsAndSynopsis?.synopsis,
+                },
+                {
+                  label: "Title Registration",
+                  url:
+                    data.forms?.nocDocumentsAndSynopsis?.data
+                      ?.titleRegistration ||
+                    data.forms?.nocDocumentsAndSynopsis?.titleRegistration ||
+                    data.nocDocumentsAndSynopsis?.data?.titleRegistration ||
+                    data.nocDocumentsAndSynopsis?.titleRegistration,
+                },
+                {
+                  label: "Registration Certificate",
+                  url:
+                    data.forms?.nocDocumentsAndSynopsis?.data
+                      ?.registrationCertificate ||
+                    data.forms?.nocDocumentsAndSynopsis
+                      ?.registrationCertificate ||
+                    data.nocDocumentsAndSynopsis?.data
+                      ?.registrationCertificate ||
+                    data.nocDocumentsAndSynopsis?.registrationCertificate,
+                },
+              ].map(
+                (doc, i) =>
+                  doc.url && (
+                    <a
+                      key={i}
+                      href={doc.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 p-3.5 bg-white border border-gray-200/80 rounded-xl hover:border-gray-300 hover:shadow-sm transition-all group"
+                    >
+                      <div className="w-9 h-9 rounded-lg bg-red-50 flex items-center justify-center flex-shrink-0 group-hover:bg-red-100 transition-colors">
+                        <FaExternalLinkAlt size={14} className="text-red-500" />
+                      </div>
+                      <div className="overflow-hidden">
+                        <h5 className="text-[12px] font-bold text-gray-700 truncate group-hover:text-gray-900">
+                          {doc.label}
+                        </h5>
+                        <span className="text-[10px] text-blue-500 font-medium flex items-center gap-1 mt-0.5">
+                          View PDF <FaExternalLinkAlt size={7} />
+                        </span>
+                      </div>
+                    </a>
+                  ),
+              )}
+            </div>
+          </div>
+        );
+      case "synopsis":
+        const synopsisData =
+          data.forms?.nocDocumentsAndSynopsis?.data?.synopsis ||
+          data.forms?.nocDocumentsAndSynopsis?.synopsis ||
+          data.nocDocumentsAndSynopsis?.data?.synopsis ||
+          data.nocDocumentsAndSynopsis?.synopsis;
+
+        return (
+          <div className="space-y-4">
+            <h3 className="text-sm font-bold text-gray-900 border-b border-gray-200 pb-2 mb-4">
+              Synopsis
+            </h3>
+            {synopsisData ? (
+              <div className="bg-white border border-gray-200/80 rounded-xl p-6">
+                <p className="text-[13px] text-gray-700 leading-relaxed whitespace-pre-wrap">
+                  {synopsisData}
+                </p>
+              </div>
+            ) : (
+              <div className="py-12 text-center text-gray-400 text-sm bg-gray-50/50 border border-dashed border-gray-200 rounded-xl">
+                <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
+                  <FaExternalLinkAlt className="text-gray-300" size={16} />
+                </div>
+                No synopsis available
+              </div>
+            )}
+          </div>
+        );
       default:
         return null;
     }

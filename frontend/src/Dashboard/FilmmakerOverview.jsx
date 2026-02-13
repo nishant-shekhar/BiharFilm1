@@ -475,11 +475,15 @@ const FilmmakerOverview = () => {
                           const isAnnexureADone =
                             progress.annexureAFilledOrNot === true;
 
+                          const isDocumentsUploaded =
+                            progress.nocDocumentsSubmitted === true;
+
                           const allDone =
                             isAnnexure1Done &&
                             isAnnexure2Done &&
                             isAnnexureADone &&
-                            isUndertakingDone;
+                            isUndertakingDone &&
+                            isDocumentsUploaded;
 
                           if (allDone) {
                             return (
@@ -566,6 +570,7 @@ const FilmmakerOverview = () => {
                           } else {
                             // Detailed Breakdown
                             const statusList = [
+                              { name: "Documents", done: isDocumentsUploaded },
                               { name: "Annexure 1", done: isAnnexure1Done },
                               { name: "Annexure 2", done: isAnnexure2Done },
                               { name: "Annexure A", done: isAnnexureADone },

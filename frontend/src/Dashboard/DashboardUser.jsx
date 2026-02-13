@@ -10,6 +10,7 @@ import ApplyNOCForm from "./Annexure2";
 import AnnexureA from "./AnnexureA";
 import UndertakingForm from "./UndertakingForm";
 import ArtistRegistrationForm from "./AddArtistForm";
+import ShootingPermissionDocuments from "./ShootingPermissionDocuments";
 
 import ArtistProfile from "./ArtistProfile";
 import FilmmakerOverview from "./FilmmakerOverview";
@@ -450,6 +451,17 @@ const UserDashboard = () => {
     if (activeSection === "Artist Registration") {
       return <ArtistRegistrationForm />;
     }
+    if (activeSection === "Upload Documents") {
+      return (
+        <ShootingPermissionDocuments
+          applicationId={selectedAppId}
+          onSuccess={() => {
+            fetchUserProfile();
+            setActiveSection("Dashboard");
+          }}
+        />
+      );
+    }
 
     return (
       <div className="p-4">
@@ -653,10 +665,10 @@ const UserDashboard = () => {
                           }
                         }}
                         disabled={isCreatingNOC}
-                        className="w-full mb-3 flex items-center justify-center gap-2 py-1.5 px-2 bg-gray-50 text-gray-600 text-[10px] font-bold uppercase tracking-wider rounded-lg border border-gray-200 hover:bg-gray-100 transition-all disabled:opacity-50"
+                        className="w-full mb-3 flex items-center justify-center gap-2 py-1.5 px-2 bg-gray-50 text-gray-600 text-[10px] font-bold uppercase tracking-wider rounded-lg  hover:bg-gray-100 transition-all disabled:opacity-50"
                       >
                         {isCreatingNOC ? (
-                          <div className="h-3 w-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+                          <div className="h-3 w-3  border-t-transparent rounded-full animate-spin" />
                         ) : (
                           <>
                             <span className="text-lg leading-none">+</span>{" "}
@@ -669,7 +681,10 @@ const UserDashboard = () => {
                       <div className="space-y-3">
                         {nocList.map((app, index) => {
                           const appId =
-                            app.applicationId || app._id || `temp-${index}`;
+                            app.applicationId ||
+                            app.id ||
+                            app._id ||
+                            `temp-${index}`;
 
                           const isAppExpanded = expandedAppId === appId;
                           const isAppSelected =
@@ -763,6 +778,10 @@ const UserDashboard = () => {
                               {isAppExpanded && (
                                 <ul className="mt-1 space-y-0.5 pl-2 border-l-2 border-gray-100 ml-2">
                                   {[
+                                    {
+                                      name: "Upload Documents",
+                                      icon: FileText,
+                                    },
                                     { name: "Annexure 1", icon: FileStack },
                                     { name: "Annexure 2", icon: FileCheck },
                                     { name: "Annexure A", icon: FileStack },
@@ -791,6 +810,15 @@ const UserDashboard = () => {
                                       isCompleted =
                                         progress.undertakingUploaded ||
                                         !!app.forms?.undertaking;
+                                    if (subItem.name === "Upload Documents") {
+                                      isCompleted =
+                                        progress.nocDocumentsSubmitted ===
+                                          true ||
+                                        app.nocDocumentsSubmitted === true ||
+                                        progress.shootingPermissionUploaded ||
+                                        !!app.forms?.shootingPermission ||
+                                        !!app.documents;
+                                    }
 
                                     const isLocked =
                                       isCompleted && app.status !== "REJECTED";
@@ -803,7 +831,7 @@ const UserDashboard = () => {
                                         <button
                                           className={`w-full py-2 px-2 flex items-center justify-between text-[11px] rounded-md transition-all ${
                                             isActiveSub
-                                              ? "bg-white shadow-sm text-rose-600 font-bold"
+                                              ? "bg-gray-100/80 text-rose-600 font-bold"
                                               : "text-gray-500 hover:text-gray-800 hover:bg-gray-50"
                                           }`}
                                           onClick={() => {

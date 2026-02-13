@@ -60,7 +60,12 @@ const AddVendorForm = ({ onClose, initialData = null, isEditMode = false }) => {
             type: p.type || p.productType || "",
             description: p.description || p.productDescription || "",
             price: p.price || p.productPrice || "",
+            priceFrom:
+              (p.price || p.productPrice || "").toString().split("-")[0] || "",
+            priceTo:
+              (p.price || p.productPrice || "").toString().split("-")[1] || "",
             imagePreview: p.imageUrl || p.image || null,
+            productLink: p.linkProduct || p.productLink || "",
             // existing image URL, no new file initially
           })) || [],
       });
@@ -68,7 +73,7 @@ const AddVendorForm = ({ onClose, initialData = null, isEditMode = false }) => {
         initialData.logoUrl ||
           initialData.image ||
           initialData.cloudinaryLink ||
-          null
+          null,
       );
     }
   }, [isEditMode, initialData]);
@@ -89,19 +94,33 @@ const AddVendorForm = ({ onClose, initialData = null, isEditMode = false }) => {
     price: "",
     imageFile: null,
     imagePreview: null,
+    productLink: "",
   });
 
   const categories = [
-    "Photography & Videography",
-    "Catering Services",
-    "Decorations & Lighting",
-    "Music & Entertainment",
-    "Transportation",
-    "Venues & Locations",
-    "Costumes & Makeup",
-    "Equipment Rental",
-    "Post-Production",
-    "Other",
+    "Shooting Studios",
+    "Sound Studios",
+    "Editing Studios",
+    "Animation & Graphics Studios",
+    "Costume Suppliers",
+    "Props Suppliers",
+    "Food & Catering Suppliers",
+    "Cine Equipment Suppliers",
+    "Junior Artist Providers",
+    "Spot Boy Providers",
+    "Hotels & Hospitality Providers",
+    "Vanity Van Providers",
+    "Transport Providers",
+    "Logistics Providers",
+    "Travel Agents",
+    "Generator Services",
+    "Security Services",
+    "Houses for shooting providers",
+    // Added from OLD list (missing)
+    "Choreography & Dancers",
+    "Still Photography & BTS",
+    "Lighting Equipment Suppliers",
+    "Others",
   ];
 
   const validateField = (name, value) => {
@@ -214,17 +233,28 @@ const AddVendorForm = ({ onClose, initialData = null, isEditMode = false }) => {
   };
 
   const addProduct = () => {
-    if (!currentProduct.name || !currentProduct.type || !currentProduct.price) {
+    // Combine price range
+    const priceString =
+      currentProduct.priceFrom && currentProduct.priceTo
+        ? `${currentProduct.priceFrom}-${currentProduct.priceTo}`
+        : currentProduct.price;
+
+    if (
+      !currentProduct.name ||
+      !currentProduct.type ||
+      (!currentProduct.priceFrom && !currentProduct.price) ||
+      (!currentProduct.priceTo && !currentProduct.price)
+    ) {
       setAlertState({
         isOpen: true,
         type: "warning",
         title: "Missing Information",
-        message: "Product name, type, and price are required.",
+        message: "Product name, type, and price range are required.",
       });
       return;
     }
 
-    if (!currentProduct.imageFile) {
+    if (!currentProduct.imageFile && !currentProduct.imagePreview) {
       setAlertState({
         isOpen: true,
         type: "warning",
@@ -234,9 +264,27 @@ const AddVendorForm = ({ onClose, initialData = null, isEditMode = false }) => {
       return;
     }
 
+    if (
+      currentProduct.productLink &&
+      !currentProduct.productLink.startsWith("https://")
+    ) {
+      setAlertState({
+        isOpen: true,
+        type: "warning",
+        title: "Invalid Link",
+        message: "Product link must start with https://",
+      });
+      return;
+    }
+
+    const newProduct = {
+      ...currentProduct,
+      price: priceString,
+    };
+
     setFormData((prev) => ({
       ...prev,
-      products: [...prev.products, { ...currentProduct }],
+      products: [...prev.products, newProduct],
     }));
 
     // Reset product form
@@ -245,6 +293,9 @@ const AddVendorForm = ({ onClose, initialData = null, isEditMode = false }) => {
       type: "",
       description: "",
       price: "",
+      priceFrom: "",
+      priceTo: "",
+      productLink: "",
       imageFile: null,
       imagePreview: null,
     });
@@ -402,6 +453,7 @@ const AddVendorForm = ({ onClose, initialData = null, isEditMode = false }) => {
         productType: product.type,
         productDescription: product.description || "",
         productPrice: product.price,
+        linkProduct: product.productLink || "", // Changed key to linkProduct
       }));
 
       // Append products JSON string
@@ -424,12 +476,12 @@ const AddVendorForm = ({ onClose, initialData = null, isEditMode = false }) => {
         // 1. Update Vendor Details
         const vendorResponse = await api.put(
           `/api/admin/vendor/updateVendor/${initialData.id}`,
-          submitData
+          submitData,
         );
 
         if (!vendorResponse.data.success) {
           throw new Error(
-            vendorResponse.data.message || "Failed to update vendor"
+            vendorResponse.data.message || "Failed to update vendor",
           );
         }
 
@@ -443,13 +495,16 @@ const AddVendorForm = ({ onClose, initialData = null, isEditMode = false }) => {
             productData.append("productType", product.type);
             productData.append("productDescription", product.description || "");
             productData.append("productPrice", product.price);
+            if (product.productLink) {
+              productData.append("linkProduct", product.productLink);
+            }
             if (product.imageFile) {
               productData.append("image", product.imageFile);
             }
 
             return api.put(
               `/api/admin/vendor/updateProduct/${product.id}`,
-              productData
+              productData,
             );
           });
 
@@ -469,7 +524,7 @@ const AddVendorForm = ({ onClose, initialData = null, isEditMode = false }) => {
         // Single API Call
         const response = await api.post(
           "/api/admin/vendor/addVendor",
-          submitData
+          submitData,
         );
 
         if (!response.data.success) {
@@ -897,14 +952,42 @@ const AddVendorForm = ({ onClose, initialData = null, isEditMode = false }) => {
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-gray-500 mb-1">
-                          Price (₹) *
+                          Price Range (₹) *
+                        </label>
+
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            name="priceFrom"
+                            value={currentProduct.priceFrom || ""}
+                            onChange={handleProductChange}
+                            placeholder="From"
+                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-[#891737] focus:border-[#891737] outline-none"
+                          />
+
+                          <span className="text-gray-400 text-sm">to</span>
+
+                          <input
+                            type="number"
+                            name="priceTo"
+                            value={currentProduct.priceTo || ""}
+                            onChange={handleProductChange}
+                            placeholder="To"
+                            className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-[#891737] focus:border-[#891737] outline-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">
+                          Product Link
                         </label>
                         <input
-                          type="number"
-                          name="price"
-                          value={currentProduct.price}
+                          type="text"
+                          name="productLink"
+                          value={currentProduct.productLink}
                           onChange={handleProductChange}
-                          placeholder="0.00"
+                          placeholder="Product Link"
                           className="w-full px-3 py-2 bg-white border border-gray-200 rounded-lg text-sm focus:ring-1 focus:ring-[#891737] focus:border-[#891737] outline-none"
                         />
                       </div>
@@ -919,7 +1002,35 @@ const AddVendorForm = ({ onClose, initialData = null, isEditMode = false }) => {
                       </button>
                       <button
                         type="button"
-                        onClick={addProduct}
+                        onClick={() => {
+                          const finalData = {
+                            ...currentProduct,
+                            price: `${currentProduct.priceFrom}-${currentProduct.priceTo}`,
+                          };
+                          // Call the original addProduct logic but with modified data
+                          if (
+                            !finalData.name ||
+                            !finalData.type ||
+                            !currentProduct.priceFrom ||
+                            !currentProduct.priceTo
+                          ) {
+                            alert("Please fill all required fields");
+                            return;
+                          }
+                          setProducts([...products, finalData]);
+                          setCurrentProduct({
+                            name: "",
+                            type: "",
+                            description: "",
+                            price: "",
+                            priceFrom: "",
+                            priceTo: "",
+                            productLink: "", // Reset link
+                            image: null,
+                            imagePreview: null,
+                          });
+                          setShowProductForm(false);
+                        }}
                         className="px-3 py-1.5 text-xs font-medium text-white bg-gray-900 hover:bg-black rounded-lg transition-colors"
                       >
                         Add Item

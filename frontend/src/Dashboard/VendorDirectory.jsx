@@ -16,7 +16,6 @@ import {
   LayoutList,
   Calendar,
   Tag,
-  ExternalLink,
   ShieldCheck,
   AlertTriangle,
   Filter,
@@ -24,6 +23,7 @@ import {
   RefreshCcw,
   Pencil,
   Trash2,
+  ExternalLink,
 } from "lucide-react";
 import AddVendorForm from "./AddVendorForm";
 import DownloadExcel from "../Components/DownloadExcel";
@@ -76,7 +76,7 @@ const VendorDirectory = ({ searchQuery }) => {
       setSelectedVendorIds((prev) => [...prev, id]);
     } else {
       setSelectedVendorIds((prev) =>
-        prev.filter((vendorId) => vendorId !== id)
+        prev.filter((vendorId) => vendorId !== id),
       );
     }
   };
@@ -131,8 +131,8 @@ const VendorDirectory = ({ searchQuery }) => {
       selectedStatus === "all"
         ? true
         : selectedStatus === "verified"
-        ? isVerified(vendor)
-        : !isVerified(vendor);
+          ? isVerified(vendor)
+          : !isVerified(vendor);
 
     return (
       matchesCategory &&
@@ -175,8 +175,8 @@ const VendorDirectory = ({ searchQuery }) => {
     const previousVendors = [...vendors];
     setVendors(
       vendors.map((v) =>
-        v.id === vendorId ? { ...v, verified: newStatus } : v
-      )
+        v.id === vendorId ? { ...v, verified: newStatus } : v,
+      ),
     );
 
     if (selectedVendor && selectedVendor.id === vendorId) {
@@ -218,7 +218,7 @@ const VendorDirectory = ({ searchQuery }) => {
   const handleDeleteVendors = async () => {
     if (
       !window.confirm(
-        `Are you sure you want to delete ${selectedVendorIds.length} vendor(s)?`
+        `Are you sure you want to delete ${selectedVendorIds.length} vendor(s)?`,
       )
     ) {
       return;
@@ -226,7 +226,7 @@ const VendorDirectory = ({ searchQuery }) => {
 
     try {
       const deletePromises = selectedVendorIds.map((id) =>
-        api.delete(`/api/admin/vendor/deleteVendor/${id}`)
+        api.delete(`/api/admin/vendor/deleteVendor/${id}`),
       );
 
       await Promise.all(deletePromises);
@@ -806,9 +806,17 @@ const VendorDirectory = ({ searchQuery }) => {
               {/* Profile Section */}
               <div className="flex items-start gap-4 mb-6">
                 <img
-                  src={selectedVendor.logoUrl || "/placeholder.png"}
+                  src={
+                    selectedVendor.logoUrl ||
+                    selectedVendor.image ||
+                    selectedVendor.cloudinaryLink ||
+                    "/placeholder.png"
+                  }
                   alt={selectedVendor.vendorName}
                   className="w-24 h-24 rounded-lg object-cover border border-gray-100"
+                  onError={(e) => {
+                    e.target.src = "/placeholder.png";
+                  }}
                 />
                 <div className="flex-1">
                   <div className="flex items-start justify-between">
@@ -820,17 +828,6 @@ const VendorDirectory = ({ searchQuery }) => {
                         {selectedVendor.category}
                       </p>
                     </div>
-                    {isVerified(selectedVendor) ? (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-green-50 text-green-600 border border-green-100">
-                        <ShieldCheck className="w-4 h-4" />
-                        Verified
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-50 text-amber-600 border border-amber-100">
-                        <Clock className="w-4 h-4" />
-                        Pending
-                      </span>
-                    )}
                   </div>
                 </div>
               </div>
@@ -913,24 +910,62 @@ const VendorDirectory = ({ searchQuery }) => {
                           key={idx}
                           className="p-3 bg-white rounded-lg border border-gray-100"
                         >
-                          <div className="flex justify-between items-start gap-4">
-                            <div className="flex-1">
+                          <div className="flex items-start gap-4">
+                            {/* Product Image */}
+                            <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
+                              <img
+                                src={
+                                  product.imageUrl ||
+                                  product.image ||
+                                  product.cloudinaryLink ||
+                                  product.productImage ||
+                                  "/api/placeholder/64/64"
+                                }
+                                alt={product.name || product.productName}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  e.target.src = "/api/placeholder/64/64";
+                                }}
+                              />
+                            </div>
+
+                            {/* Product Details */}
+                            <div className="flex-1 min-w-0">
                               <h5 className="text-sm font-medium text-gray-900 mb-1">
-                                {product.name}
+                                {product.name || product.productName}
                               </h5>
                               <span className="inline-block px-2 py-0.5 bg-gray-50 text-gray-600 rounded text-xs font-medium">
-                                {product.type}
+                                {product.type || product.productType}
                               </span>
-                              {product.description && (
-                                <p className="text-xs text-gray-600 mt-2">
-                                  {product.description}
+                              {(product.description ||
+                                product.productDescription) && (
+                                <p className="text-xs text-gray-600 mt-2 line-clamp-2">
+                                  {product.description ||
+                                    product.productDescription}
                                 </p>
                               )}
+
+                              {/* Product Link Button */}
+                              {(product.linkProduct || product.productLink) && (
+                                <a
+                                  href={
+                                    product.linkProduct || product.productLink
+                                  }
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-1 mt-2 text-xs font-medium text-[#891737] hover:underline"
+                                >
+                                  View Product{" "}
+                                  <ExternalLink className="w-3 h-3" />
+                                </a>
+                              )}
                             </div>
-                            {product.price && (
-                              <div className="text-right">
+
+                            {/* Price */}
+                            {(product.price || product.productPrice) && (
+                              <div className="text-right flex-shrink-0">
                                 <p className="text-lg font-semibold text-gray-900">
-                                  ₹{product.price}
+                                  ₹{product.price || product.productPrice}
                                 </p>
                                 <p className="text-xs text-gray-500">
                                   per unit
@@ -946,37 +981,10 @@ const VendorDirectory = ({ searchQuery }) => {
             </div>
 
             {/* Footer */}
-            <div className="px-6 py-4 border-t border-gray-100 flex justify-between items-center gap-4">
-              {isVerified(selectedVendor) ? (
-                <button
-                  onClick={() =>
-                    handleVerifyStatus(
-                      selectedVendor.id,
-                      selectedVendor.verified
-                    )
-                  }
-                  className="flex-1 px-4 py-2 text-sm font-medium text-red-600 bg-red-50 border border-red-100 rounded-lg hover:bg-red-100 transition-colors flex items-center justify-center gap-2"
-                >
-                  <X className="w-4 h-4" />
-                  Unverify Vendor
-                </button>
-              ) : (
-                <button
-                  onClick={() =>
-                    handleVerifyStatus(
-                      selectedVendor.id,
-                      selectedVendor.verified
-                    )
-                  }
-                  className="flex-1 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
-                >
-                  <CheckCircle className="w-4 h-4" />
-                  Verify Vendor
-                </button>
-              )}
+            <div className="px-6 py-4 border-t border-gray-100 flex justify-end">
               <button
                 onClick={() => setSelectedVendor(null)}
-                className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                className="w-full sm:w-auto px-6 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-all duration-200"
               >
                 Close
               </button>
@@ -985,7 +993,6 @@ const VendorDirectory = ({ searchQuery }) => {
         </div>
       )}
 
-      {/* Add Vendor Modal */}
       {showAddModal && (
         <AddVendorForm
           onClose={() => {
