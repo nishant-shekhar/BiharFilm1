@@ -3,10 +3,8 @@ import {
   FiSearch,
   FiUser,
   FiArrowLeft,
-  FiMail,
-  FiPhone,
   FiMapPin,
-  FiAward,
+  FiShield,
   FiChevronDown,
   FiX,
 } from "react-icons/fi";
@@ -45,89 +43,95 @@ const Disclaimer = () => (
   </div>
 );
 
-const LocalArtist = ({ onClose }) => {
+const Security = ({ onClose }) => {
   const [artists, setArtists] = useState([]);
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [focusedArtist, setFocusedArtist] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Categories List
-  const categories = [
-    "Actor/Actress",
-    "Anchor",
-    "Voice Artist (Dubbing)",
-    "Junior Artist",
-    "Music Director (Songs)",
-    "Music Director (Background)",
-    "Arranger",
-    "Musician",
-    "Singer Male",
-    "Singer Female",
-    "Choreographer",
-    "Assistant Choreographer",
-    "Dancer Male",
-    "Dancer Female",
-    "Group Dancer Male",
-    "Group Dancer Female",
-    "Other",
-        "All",
+  // Existing URL from Security.jsx
+  const VISITING_URL = "https://film.bihar.gov.in/api/vendor/securityvendors";
 
+  // Whitelist of valid Technician roles
+  const TECHNICIAN_ROLES = [
+    "Story Writer",
+    "Screenplay Writer",
+    "Dialogue Writer",
+    "Voice Over Writer",
+    "Director of Photography (DOP)",
+    "Camera Assistant",
+    "Lighting Assistant",
+    "Light Man",
+    "Sound Designer",
+    "Sound Recordist",
+    "Effects & Foley Artist",
+    "Sound Mixing Master (RR)",
+    "Editor",
+    "Editing Assistant",
+    "Production Designer",
+    "Art Director",
+    "Art Director Assistant",
+    "Costume Designer",
+    "Dress Man",
+    "Make Up Man",
+    "Make Up Assistant",
+    "Hair Stylist",
+    "Wig Maker",
+    "DI Colourist",
   ];
 
   useEffect(() => {
-    const fetchArtists = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        // Fetch from both endpoints
-        const [allArtistsRes, verifiedArtistsRes] = await Promise.all([
-          api.get("/api/admin/artist/allArtists"),
+        // Fetch from both endpoints: Existing Security Vendors + New Verified Artists
+        const [securityRes, verifiedArtistsRes] = await Promise.all([
+          fetch(VISITING_URL).then((res) => res.json()),
           api.get("/api/artist/verifiedartists"),
         ]);
 
-        let combinedArtists = [];
+        let combinedData = [];
 
-        if (allArtistsRes.data.success) {
-          combinedArtists = [...allArtistsRes.data.data];
+        // Process Security Vendors (Existing API)
+        if (securityRes.success && Array.isArray(securityRes.data)) {
+          const securityProviders = securityRes.data.map((vendor) => ({
+            ...vendor,
+            id: vendor.id || `sec_${Math.random()}`,
+            fullName: vendor.vendorName, // Map to fullName for UI
+            professions: vendor.category ? [{ name: vendor.category }] : [], // Map category for UI
+            image: vendor.logoUrl || vendor.image, // Map logo for UI
+            isSecurityProvider: true,
+          }));
+          combinedData = [...securityProviders];
         }
 
+        // Process Verified Artists (New API)
         if (verifiedArtistsRes.data.success) {
-          // Normalize verified artists to match structure if needed, then merge
           const verifiedData = verifiedArtistsRes.data.data.map((artist) => ({
             ...artist,
-            // Ensure email field matches what UI expects (emailId or email)
             emailId: artist.emailId || artist.email,
-            // Ensure experience structure is handled correctly in mapping later
             isVerifiedSource: true,
           }));
 
-          // Merge and deduplicate by ID
-          const existingIds = new Set(combinedArtists.map((a) => a.id));
+          // Merge: Add verified artists if ID doesn't exist (though IDs likely distinct)
+          const existingIds = new Set(combinedData.map((a) => a.id));
           verifiedData.forEach((vArtist) => {
             if (!existingIds.has(vArtist.id)) {
-              combinedArtists.push(vArtist);
-            } else {
-              // Optionally update existing artist with verified details if they overlap
-              const index = combinedArtists.findIndex(
-                (a) => a.id === vArtist.id,
-              );
-              combinedArtists[index] = {
-                ...combinedArtists[index],
-                ...vArtist,
-              };
+              combinedData.push(vArtist);
             }
           });
         }
 
-        setArtists(combinedArtists);
+        setArtists(combinedData);
       } catch (error) {
-        console.error("Error fetching artists:", error);
+        console.error("Error fetching data:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchArtists();
+    fetchData();
   }, []);
 
   const getParsedExperiences = (artist) => {
@@ -139,7 +143,6 @@ const LocalArtist = ({ onClose }) => {
         exps = artist.experiences || [];
       }
 
-      // Normalize roleInFilm to role if it exists (for new API structure)
       return exps.map((e) => ({
         ...e,
         role: e.role || e.roleInFilm,
@@ -150,7 +153,9 @@ const LocalArtist = ({ onClose }) => {
   };
 
   const getPrimaryRole = (artist) => {
-    // 1. Check professions (new API structure)
+    if (artist.isSecurityProvider && artist.category) {
+      return artist.category;
+    }
     if (
       artist.professions &&
       Array.isArray(artist.professions) &&
@@ -160,7 +165,6 @@ const LocalArtist = ({ onClose }) => {
         .map((p) => (typeof p === "object" ? p.name || p : p))
         .join(", ");
     }
-    // 2. Check specializations (new API structure)
     if (
       artist.specializations &&
       Array.isArray(artist.specializations) &&
@@ -170,14 +174,13 @@ const LocalArtist = ({ onClose }) => {
         .map((s) => (typeof s === "object" ? s.name || s : s))
         .join(", ");
     }
-
-    // 3. Fallback to experiences
     const experiences = getParsedExperiences(artist);
     if (experiences.length > 0) {
       return experiences[0].role || experiences[0].roleInFilm || "Artist";
     }
-    return "Artist Profile";
+    return "Security Profile";
   };
+
   const calculateAge = (dob) => {
     if (!dob) return "N/A";
     const birthDate = new Date(dob);
@@ -191,13 +194,34 @@ const LocalArtist = ({ onClose }) => {
   };
 
   const filtered = artists.filter((a) => {
+    // 1. Whitelist Check: Must have at least one Technician role OR be a security provider
+    const hasTechnicianRole = (role) => {
+      if (!role) return false;
+      const roleName = typeof role === "string" ? role : role.name;
+      return TECHNICIAN_ROLES.some(
+        (tech) => tech.toLowerCase() === roleName.toLowerCase(),
+      );
+    };
+
+    const isTechnician =
+      a.isSecurityProvider ||
+      (a.professions && a.professions.some(hasTechnicianRole)) ||
+      (a.specializations && a.specializations.some(hasTechnicianRole)) ||
+      getParsedExperiences(a).some(
+        (exp) =>
+          hasTechnicianRole(exp.role) || hasTechnicianRole(exp.roleInFilm),
+      );
+
+    if (!isTechnician) return false;
+
+    // 2. Local Search
     const matchesSearch =
       a.fullName && a.fullName.toLowerCase().includes(search.toLowerCase());
 
     if (selectedCategory === "All") return matchesSearch;
 
-    // Helper to check if a role matches the selected category
-    const hasRole = (role) => {
+    // 3. Category Chip Filter
+    const matchesSelectedCategory = (role) => {
       if (!role) return false;
       const roleName = typeof role === "string" ? role : role.name;
       return (
@@ -206,17 +230,22 @@ const LocalArtist = ({ onClose }) => {
     };
 
     const matchesCategory =
-      (a.professions && a.professions.some(hasRole)) ||
-      (a.specializations && a.specializations.some(hasRole)) ||
+      (a.isSecurityProvider &&
+        a.category &&
+        a.category.toLowerCase() === selectedCategory.toLowerCase()) ||
+      (a.professions && a.professions.some(matchesSelectedCategory)) ||
+      (a.specializations && a.specializations.some(matchesSelectedCategory)) ||
       getParsedExperiences(a).some(
-        (exp) => hasRole(exp.role) || hasRole(exp.roleInFilm),
+        (exp) =>
+          matchesSelectedCategory(exp.role) ||
+          matchesSelectedCategory(exp.roleInFilm),
       );
 
     return matchesSearch && matchesCategory;
   });
 
   return (
-    <div className="w-full min-h-screen bg-[#FDFCFD] flex relative overflow-hidden">
+    <div className="w-full min-h-screen flex bg-[#FDFCFD] relative overflow-hidden">
       {/* Decorative Background Elements */}
       <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] bg-[#891737]/5 rounded-full blur-[120px] pointer-events-none"></div>
       <div className="absolute bottom-[-10%] left-[-10%] w-[30%] h-[30%] bg-[#891737]/3 rounded-full blur-[100px] pointer-events-none"></div>
@@ -239,7 +268,7 @@ const LocalArtist = ({ onClose }) => {
             <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-[#891737] transition-colors w-4 h-4" />
             <input
               type="text"
-              placeholder="Search artist..."
+              placeholder="Search technician..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full placeholder:text-gray-400 pl-9 pr-3 py-2 text-xs rounded-lg bg-gray-50 border border-gray-100 focus:bg-white focus:border-[#891737] focus:ring-2 focus:ring-[#891737]/5 transition-all outline-none"
@@ -252,7 +281,23 @@ const LocalArtist = ({ onClose }) => {
           <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider px-2 mb-2">
             Categories
           </h3>
-          {categories.map((cat) => (
+          <button
+            onClick={() => {
+              setSelectedCategory("All");
+              setFocusedArtist(null);
+            }}
+            className={`w-full text-left px-3 py-2 rounded-md text-xs font-medium transition-all duration-200 flex items-center justify-between group ${
+              selectedCategory === "All"
+                ? "bg-[#891737] text-white shadow-sm"
+                : "text-gray-600 hover:bg-white hover:shadow-sm"
+            }`}
+          >
+            <span>All Categories</span>
+            {selectedCategory === "All" && (
+              <div className="w-1 h-1 rounded-full bg-white"></div>
+            )}
+          </button>
+          {TECHNICIAN_ROLES.map((cat) => (
             <button
               key={cat}
               onClick={() => {
@@ -265,7 +310,7 @@ const LocalArtist = ({ onClose }) => {
                   : "text-gray-600 hover:bg-white hover:shadow-sm"
               }`}
             >
-              <span>{cat === "All" ? "All Artists" : cat}</span>
+              <span>{cat}</span>
               {selectedCategory === cat && (
                 <div className="w-1 h-1 rounded-full bg-white"></div>
               )}
@@ -276,7 +321,7 @@ const LocalArtist = ({ onClose }) => {
         {/* Sidebar Footer */}
         <div className="p-3 border-t border-gray-100/50 text-center">
           <p className="text-[10px] text-gray-400">
-            {filtered.length} Artists Found
+            {filtered.length} Profiles Found
           </p>
         </div>
       </div>
@@ -287,10 +332,10 @@ const LocalArtist = ({ onClose }) => {
         <div className="lg:hidden sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-100 px-4 py-3 flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold text-gray-900">
-              Artist Directory
+              Local Technicians
             </h2>
             <span className="text-xs text-gray-500">
-              {filtered.length} artists
+              {filtered.length} profiles
             </span>
           </div>
 
@@ -315,7 +360,8 @@ const LocalArtist = ({ onClose }) => {
                 }}
                 className="w-full appearance-none bg-gray-50 border border-gray-100 text-gray-700 py-2 pl-3 pr-8 rounded-lg text-sm focus:outline-none focus:border-[#891737] font-medium"
               >
-                {categories.map((cat) => (
+                <option value="All">All Categories</option>
+                {TECHNICIAN_ROLES.map((cat) => (
                   <option key={cat} value={cat}>
                     {cat}
                   </option>
@@ -336,13 +382,13 @@ const LocalArtist = ({ onClose }) => {
               <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 pb-4 border-b border-gray-100">
                 <div>
                   <h2 className="text-xl font-bold text-gray-700 tracking-tight leading-none mb-2">
-                    Artist Directory
+                    Local Technicians
                   </h2>
                   <p className="text-xs text-gray-400">
-                    Official BSFDFC Talent Registry
+                    Official BSFDFC Registry
                   </p>
                 </div>
-                <div className="mt-4 md:mt-0 text-right">
+                <div className="mt-4 md:mt-0 text-right pr-10 md:pr-0">
                   <p className="text-xs font-bold text-[#891737] uppercase tracking-wide">
                     {selectedCategory === "All"
                       ? "All Categories"
@@ -359,19 +405,21 @@ const LocalArtist = ({ onClose }) => {
                 <div className="flex flex-col items-center justify-center min-h-[50vh] space-y-4">
                   <div className="w-12 h-12 border-[3px] border-[#891737]/10 border-t-[#891737] rounded-full animate-spin"></div>
                   <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-                    Loading Artists...
+                    Curating Directory...
                   </p>
                 </div>
               ) : filtered.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 text-center animate-in fade-in zoom-in-95 duration-500 bg-white/50 rounded-3xl border border-gray-100/50">
                   <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4 border border-gray-100">
-                    <FiUser className="text-2xl text-gray-300" />
+                    <FiShield className="text-2xl text-gray-300" />
                   </div>
                   <h3 className="text-lg font-bold text-gray-900 mb-1">
-                    No artists found
+                    No Records Found
                   </h3>
-                  <p className="text-sm text-gray-500 max-w-xs mx-auto">
-                    Try adjusting your search or category filter.
+                  <p className="text-sm text-gray-500 max-w-xs mx-auto leading-relaxed">
+                    There are currently no registered technicians or security
+                    providers available in this category. Please check back
+                    later for updates.
                   </p>
                 </div>
               ) : (
@@ -401,14 +449,7 @@ const LocalArtist = ({ onClose }) => {
                             {artist.fullName}
                           </h3>
                           <p className="text-[10px] md:text-xs text-gray-300 font-medium  uppercase tracking-wide truncate">
-                            {[
-                              ...(artist.professions || []).map(
-                                (p) => p.name || p,
-                              ),
-                              ...(artist.specializations || []).map(
-                                (s) => s.name || s,
-                              ),
-                            ].join(", ") || "Artist"}
+                            {getPrimaryRole(artist)}
                           </p>
                         </div>
                       </div>
@@ -416,6 +457,7 @@ const LocalArtist = ({ onClose }) => {
                   ))}
                 </div>
               )}
+              {/* Disclaimer: showed all the time */}
               <Disclaimer />
             </>
           ) : (
@@ -468,6 +510,17 @@ const LocalArtist = ({ onClose }) => {
                           <span className="bg-[#891737] text-white px-3 py-1 rounded-full text-xs font-semibold">
                             {getPrimaryRole(focusedArtist).split(",")[0]}
                           </span>
+                          {!focusedArtist.isSecurityProvider &&
+                            (focusedArtist.professions || [])
+                              .slice(1)
+                              .map((p, i) => (
+                                <span
+                                  key={i}
+                                  className="bg-gray-100 text-gray-700 px-3 py-1 rounded-full text-xs font-semibold border border-gray-200"
+                                >
+                                  {p.name || p}
+                                </span>
+                              ))}
                           {focusedArtist.district && (
                             <span className="flex items-center gap-1 bg-gray-100 text-gray-600 px-3 py-1 rounded-full text-xs font-semibold">
                               <FiMapPin className="w-3 h-3" />{" "}
@@ -542,7 +595,7 @@ const LocalArtist = ({ onClose }) => {
                       Phone
                     </p>
                     <p className="font-semibold text-gray-900 text-sm">
-                      {focusedArtist.phoneNumber || "N/A"}
+                      {focusedArtist.phoneNumber || "Confidential"}
                     </p>
                   </div>
                   <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
@@ -550,7 +603,7 @@ const LocalArtist = ({ onClose }) => {
                       Gender
                     </p>
                     <p className="font-semibold text-gray-900 text-sm">
-                      {focusedArtist.gender || "N/A"}
+                      {focusedArtist.gender || "Not Specified"}
                     </p>
                   </div>
                   <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
@@ -567,16 +620,59 @@ const LocalArtist = ({ onClose }) => {
                 <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
                   {/* Main Info Column */}
                   <div className="xl:col-span-8 space-y-6">
-                    <AboutMeCard artist={focusedArtist} readOnly={true} />
-                    <ExperienceCard artist={focusedArtist} readOnly={true} />
-                    <GalleryCard artist={focusedArtist} readOnly={true} />
+                    {/* For Security providers (vendors), show basic info if not using Artist components */}
+                    {focusedArtist.isSecurityProvider ? (
+                      <div className="bg-white rounded-2xl border border-gray-100 p-6">
+                        <div className="flex items-center gap-2 mb-4">
+                          <FiShield className="text-[#891737]" />
+                          <h3 className="text-lg font-bold text-gray-900">
+                            Security Service Details
+                          </h3>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="p-4 bg-gray-50 rounded-xl">
+                            <p className="text-xs text-gray-500 mb-1">
+                              Category
+                            </p>
+                            <p className="font-semibold text-gray-900">
+                              {focusedArtist.category}
+                            </p>
+                          </div>
+                          <div className="p-4 bg-gray-50 rounded-xl">
+                            <p className="text-xs text-gray-500 mb-1">Status</p>
+                            <p className="font-semibold text-green-600">
+                              Verified Vendor
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <AboutMeCard artist={focusedArtist} readOnly={true} />
+                        <ExperienceCard
+                          artist={focusedArtist}
+                          readOnly={true}
+                        />
+                        <GalleryCard artist={focusedArtist} readOnly={true} />
+                      </>
+                    )}
                   </div>
 
                   {/* Sidebar Info Column */}
                   <div className="xl:col-span-4 space-y-6">
-                    <VideoLinksCard artist={focusedArtist} readOnly={true} />
-                    <BioDataCard artist={focusedArtist} readOnly={true} />
-                    <SocialMediaCard artist={focusedArtist} readOnly={true} />
+                    {!focusedArtist.isSecurityProvider && (
+                      <>
+                        <VideoLinksCard
+                          artist={focusedArtist}
+                          readOnly={true}
+                        />
+                        <BioDataCard artist={focusedArtist} readOnly={true} />
+                        <SocialMediaCard
+                          artist={focusedArtist}
+                          readOnly={true}
+                        />
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -586,8 +682,23 @@ const LocalArtist = ({ onClose }) => {
           )}
         </div>
       </div>
+      <style jsx global>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 5px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: transparent;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #e5e7eb;
+          border-radius: 20px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #d1d5db;
+        }
+      `}</style>
     </div>
   );
 };
 
-export default LocalArtist;
+export default Security;

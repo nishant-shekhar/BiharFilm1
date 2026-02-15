@@ -173,34 +173,42 @@ const VendorDirectory = ({ searchQuery }) => {
       : `/api/vendor/${vendorId}/unverify`;
 
     const previousVendors = [...vendors];
+    const previousAdminVendors = [...adminVendors];
+
+    // Optimistic update
     setVendors(
       vendors.map((v) =>
         v.id === vendorId ? { ...v, verified: newStatus } : v,
       ),
     );
+    setAdminVendors(
+      adminVendors.map((v) =>
+        v.id === vendorId ? { ...v, verified: newStatus } : v,
+      ),
+    );
 
     if (selectedVendor && selectedVendor.id === vendorId) {
-      setSelectedVendor((prev) => ({ ...prev, verified: newStatus }));
+      setSelectedVendor((prev) => ({ ...prev, verified: newStatus ? 1 : 0 }));
     }
 
     try {
       console.log(`🔄 Updating vendor ${vendorId} status to ${newStatus}...`);
       await api.put(endpoint);
       console.log(`✅ Vendor ${vendorId} status updated to ${newStatus}`);
-
-      if (adminVendors.length > 0) {
-        fetchAdminVendors();
-      }
     } catch (err) {
       console.error("❌ Failed to update vendor:", err);
-
+      // Rollback
       setVendors(previousVendors);
+      setAdminVendors(previousAdminVendors);
       if (selectedVendor && selectedVendor.id === vendorId) {
         setSelectedVendor((prev) => ({
           ...prev,
           verified: currentVerifiedValue,
         }));
       }
+      alert(
+        "Failed to update verification status. Please make sure you have admin permissions.",
+      );
     }
   };
 
@@ -455,7 +463,7 @@ const VendorDirectory = ({ searchQuery }) => {
                   <tbody className="divide-y divide-gray-100">
                     {filteredVendors.length === 0 ? (
                       <tr>
-                        <td colSpan="7" className="px-5 py-12 text-center">
+                        <td colSpan="8" className="px-5 py-12 text-center">
                           <div className="w-16 h-16 bg-gray-50 rounded-lg flex items-center justify-center mx-auto mb-3">
                             <AlertCircle className="h-8 w-8 text-gray-400" />
                           </div>
@@ -828,6 +836,37 @@ const VendorDirectory = ({ searchQuery }) => {
                         {selectedVendor.category}
                       </p>
                     </div>
+                    {activeTab === "directory" && (
+                      <div>
+                        {isVerified(selectedVendor) ? (
+                          <button
+                            onClick={() =>
+                              handleVerifyStatus(
+                                selectedVendor.id,
+                                selectedVendor.verified,
+                              )
+                            }
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-red-600 hover:bg-red-50 border border-red-100 transition-colors"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                            Unverify Vendor
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() =>
+                              handleVerifyStatus(
+                                selectedVendor.id,
+                                selectedVendor.verified,
+                              )
+                            }
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-green-600 hover:bg-green-50 border border-green-100 transition-colors"
+                          >
+                            <ShieldCheck className="w-3.5 h-3.5" />
+                            Verify Vendor
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -981,13 +1020,62 @@ const VendorDirectory = ({ searchQuery }) => {
             </div>
 
             {/* Footer */}
-            <div className="px-6 py-4 border-t border-gray-100 flex justify-end">
-              <button
-                onClick={() => setSelectedVendor(null)}
-                className="w-full sm:w-auto px-6 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-all duration-200"
-              >
-                Close
-              </button>
+            <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between gap-3">
+              <div className="flex-1">
+                <span className="text-xs text-gray-500">
+                  Status:{" "}
+                  {activeTab === "admin" ? (
+                    <span className="text-blue-600 font-medium whitespace-nowrap">
+                      Auto Verified
+                    </span>
+                  ) : isVerified(selectedVendor) ? (
+                    <span className="text-green-600 font-medium">Verified</span>
+                  ) : (
+                    <span className="text-amber-600 font-medium">
+                      Pending Review
+                    </span>
+                  )}
+                </span>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setSelectedVendor(null)}
+                  className="px-6 py-2.5 text-sm font-semibold text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 transition-all duration-200"
+                >
+                  Close
+                </button>
+                {activeTab === "directory" && (
+                  <>
+                    {isVerified(selectedVendor) ? (
+                      <button
+                        onClick={() =>
+                          handleVerifyStatus(
+                            selectedVendor.id,
+                            selectedVendor.verified,
+                          )
+                        }
+                        className="px-6 py-2.5 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition-all duration-200 flex items-center gap-2"
+                      >
+                        <X className="w-4 h-4" />
+                        Unverify Vendor
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() =>
+                          handleVerifyStatus(
+                            selectedVendor.id,
+                            selectedVendor.verified,
+                          )
+                        }
+                        className="px-6 py-2.5 text-sm font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 transition-all duration-200 flex items-center gap-2"
+                      >
+                        <ShieldCheck className="w-4 h-4" />
+                        Verify Vendor
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>

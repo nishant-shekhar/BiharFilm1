@@ -2,9 +2,9 @@ import React, { useState, useEffect } from "react";
 import Longcards from "../Cards/Longcards";
 import { IoIosArrowRoundForward } from "react-icons/io";
 import { motion } from "framer-motion";
-import Map from "./Map";
+import ProductionAssets from "../Cards/ProductionAssets";
 import LocalArtist from "../Cards/LocalArtist";
-import Security from "../Cards/Security";
+import LocalTechnicians from "../Cards/LocalTechnicians";
 import "../App.css";
 
 function Cinemaecosystem() {
@@ -130,39 +130,24 @@ function Cinemaecosystem() {
       {/* ===== Modal Popup ===== */}
       {activePopup && (
         <div
-          className="fixed inset-0 bg-black/70 backdrop-blur-md flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/60  flex items-center justify-center z-50 p-4"
           onClick={handleBackdropClick}
         >
           <div className="relative bg-gray-900 rounded-2xl border border-gray-700 shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
-            {/* Close Button */}
-            <button
-              className="absolute top-4 right-4 z-20 p-3 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 rounded-full text-red-400 hover:text-red-300 transition-all duration-300 backdrop-blur-sm"
-              onClick={handleClose}
-              aria-label="Close modal"
-            >
-              <svg
-                className="w-6 h-6"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
-            </button>
-
             {/* Modal Content */}
             <div
               className="h-full overflow-hidden"
               onClick={(e) => e.stopPropagation()}
             >
-              {activePopup === "map" && <Map />}
-              {activePopup === "localArtist" && <LocalArtist />}
-              {activePopup === "security" && <Security />}
+              {activePopup === "map" && (
+                <ProductionAssets onClose={handleClose} />
+              )}
+              {activePopup === "localArtist" && (
+                <LocalArtist onClose={handleClose} />
+              )}
+              {activePopup === "security" && (
+                <LocalTechnicians onClose={handleClose} />
+              )}
             </div>
           </div>
         </div>

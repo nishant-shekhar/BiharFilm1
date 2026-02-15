@@ -25,6 +25,7 @@ import {
   RefreshCw, // ✅ Added Refresh icon
   ChevronLeft, // ✅ Added ChevronLeft
   ChevronRight, // ✅ Added ChevronRight
+  ExternalLink,
 } from "lucide-react";
 import AlertBox from "../Components/AlertBox";
 import CategoryDropdown from "./CategoryDropdown";
@@ -68,7 +69,7 @@ const VendorDashboard = () => {
   const [vendorData, setVendorData] = useState({
     id: null,
     vendorName: "",
-    category: "",
+    category: [],
     phoneNumber: "",
     email: "",
     address: "",
@@ -106,16 +107,17 @@ const VendorDashboard = () => {
   const [productFormData, setProductFormData] = useState({
     name: "",
     type: "",
-    description: "",
+    subType: "",
     description: "",
     price: "",
     priceFrom: "",
     priceTo: "",
+    link: "",
   });
 
   const [profileFormData, setProfileFormData] = useState({
     vendorName: "",
-    category: "",
+    category: [],
     phoneNumber: "",
     email: "",
     address: "",
@@ -221,7 +223,26 @@ const VendorDashboard = () => {
           const result = response.data;
           console.log("✅ Vendor profile fetched:", result.data);
 
-          setVendorData(result.data);
+          // Convert category to array FIRST
+          let categoryArray = [];
+          if (Array.isArray(result.data.categories)) {
+            // New structure: array of objects with category.name
+            categoryArray = result.data.categories
+              .map((c) => c.category?.name)
+              .filter(Boolean);
+          } else if (Array.isArray(result.data.category)) {
+            // Old structure: array of strings
+            categoryArray = result.data.category;
+          } else if (result.data.category) {
+            // Old structure: comma-separated string
+            categoryArray = result.data.category.split(", ").filter((c) => c);
+          }
+
+          // Set vendorData with converted category
+          setVendorData({
+            ...result.data,
+            category: categoryArray,
+          });
           setVendorId(result.data.id);
 
           setStats((prev) => ({
@@ -231,7 +252,7 @@ const VendorDashboard = () => {
 
           setProfileFormData({
             vendorName: result.data.vendorName || "",
-            category: result.data.category || "",
+            category: categoryArray,
             phoneNumber: result.data.phoneNumber || "",
             email: result.data.email || "",
             address: result.data.address || "",
@@ -302,7 +323,7 @@ const VendorDashboard = () => {
 
       if (
         !profileFormData.vendorName ||
-        !profileFormData.category ||
+        profileFormData.category.length === 0 ||
         !profileFormData.phoneNumber ||
         !profileFormData.email ||
         !profileFormData.address
@@ -330,7 +351,7 @@ const VendorDashboard = () => {
 
       const formData = new FormData();
       formData.append("vendorName", profileFormData.vendorName);
-      formData.append("category", profileFormData.category);
+      formData.append("categories", profileFormData.category.join(", "));
       formData.append("phoneNumber", profileFormData.phoneNumber);
       formData.append("email", profileFormData.email);
       formData.append("address", profileFormData.address);
@@ -348,7 +369,22 @@ const VendorDashboard = () => {
         console.log("✅ Vendor created:", result.data);
 
         setVendorId(result.data.id);
+
+        const categoryArray = Array.isArray(result.data.category)
+          ? result.data.category
+          : result.data.category
+            ? result.data.category.split(", ").filter((c) => c)
+            : [];
+
         setVendorData(result.data);
+        setProfileFormData({
+          vendorName: result.data.vendorName || "",
+          category: categoryArray,
+          phoneNumber: result.data.phoneNumber || "",
+          email: result.data.email || "",
+          address: result.data.address || "",
+          website: result.data.website || "",
+        });
         setShowEditProfileModal(false);
         setLogoPreview(null);
         setLogoFile(null);
@@ -401,7 +437,7 @@ const VendorDashboard = () => {
 
       if (
         !profileFormData.vendorName ||
-        !profileFormData.category ||
+        profileFormData.category.length === 0 ||
         !profileFormData.phoneNumber ||
         !profileFormData.email ||
         !profileFormData.address
@@ -418,7 +454,7 @@ const VendorDashboard = () => {
 
       const formData = new FormData();
       formData.append("vendorName", profileFormData.vendorName);
-      formData.append("category", profileFormData.category);
+      formData.append("categories", profileFormData.category.join(", "));
       formData.append("phoneNumber", profileFormData.phoneNumber);
       formData.append("email", profileFormData.email);
       formData.append("address", profileFormData.address);
@@ -442,7 +478,25 @@ const VendorDashboard = () => {
         const result = response.data;
         console.log("✅ Vendor updated:", result.data);
 
-        setVendorData(result.data);
+        const categoryArray = Array.isArray(result.data.category)
+          ? result.data.category
+          : result.data.category
+            ? result.data.category.split(", ").filter((c) => c)
+            : [];
+
+        // Update vendorData with converted category array
+        setVendorData({
+          ...result.data,
+          category: categoryArray,
+        });
+        setProfileFormData({
+          vendorName: result.data.vendorName || "",
+          category: categoryArray,
+          phoneNumber: result.data.phoneNumber || "",
+          email: result.data.email || "",
+          address: result.data.address || "",
+          website: result.data.website || "",
+        });
         setShowEditProfileModal(false);
         setLogoPreview(null);
         setLogoFile(null);
@@ -514,7 +568,11 @@ const VendorDashboard = () => {
       const formData = new FormData();
       formData.append("name", productFormData.name);
       formData.append("type", productFormData.type);
+      formData.append("subType", productFormData.subType);
       formData.append("description", productFormData.description);
+      if (productFormData.link && /^https:\/\/.+/.test(productFormData.link)) {
+        formData.append("productLink", productFormData.link);
+      }
       const priceString =
         productFormData.priceFrom && productFormData.priceTo
           ? `${productFormData.priceFrom}-${productFormData.priceTo}`
@@ -559,10 +617,12 @@ const VendorDashboard = () => {
         setProductFormData({
           name: "",
           type: "",
+          subType: "",
           description: "",
           price: "",
           priceFrom: "",
           priceTo: "",
+          link: "",
         });
         setProductImagePreview(null);
         setProductImageFile(null);
@@ -694,7 +754,8 @@ const VendorDashboard = () => {
   const handleProductImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
-      const validation = validateFile(file);
+      // enforce 1MB max for product images
+      const validation = validateFile(file, 1);
       if (!validation.isValid) {
         showAlert({
           type: "warning",
@@ -785,11 +846,12 @@ const VendorDashboard = () => {
     setProductFormData({
       name: product.name,
       type: product.type,
-      description: product.description,
+      subType: product.subType || "",
       description: product.description,
       price: product.price || "",
       priceFrom: (product.price || "").toString().split("-")[0] || "",
       priceTo: (product.price || "").toString().split("-")[1] || "",
+      link: product.productLink || product.link || "",
     });
     setProductImagePreview(product.imageUrl);
     setShowAddProductModal(true);
@@ -804,7 +866,13 @@ const VendorDashboard = () => {
       const formData = new FormData();
       formData.append("name", productFormData.name);
       formData.append("type", productFormData.type);
+      if (productFormData.subType) {
+        formData.append("subType", productFormData.subType);
+      }
       formData.append("description", productFormData.description);
+      if (productFormData.link && /^https:\/\/.+/.test(productFormData.link)) {
+        formData.append("productLink", productFormData.link);
+      }
       const priceString =
         productFormData.priceFrom && productFormData.priceTo
           ? `${productFormData.priceFrom}-${productFormData.priceTo}`
@@ -833,7 +901,16 @@ const VendorDashboard = () => {
         // Close modal & reset
         setShowAddProductModal(false);
         setEditingProduct(null);
-        setProductFormData({ name: "", type: "", description: "", price: "" });
+        setProductFormData({
+          name: "",
+          type: "",
+          subType: "",
+          description: "",
+          price: "",
+          priceFrom: "",
+          priceTo: "",
+          link: "",
+        });
         setProductImagePreview(null);
         setProductImageFile(null);
 
@@ -1185,24 +1262,31 @@ const VendorDashboard = () => {
 
                 {/* Details */}
                 <div className="flex-1 min-w-0">
-                  <h1 className="text-lg font-semibold text-gray-900 mb-1">
+                  <h1 className="text-lg font-semibold text-gray-900 mb-2">
                     {vendorData.vendorName || "Complete your profile"}
                   </h1>
 
-                  <div className="flex items-center gap-2 text-xs text-gray-500 mb-2">
-                    {vendorData.category ? (
-                      <>
-                        <span className="font-medium text-gray-700">
-                          {vendorData.category}
+                  {/* Categories as Chips */}
+                  {vendorData.category && vendorData.category.length > 0 ? (
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {(Array.isArray(vendorData.category)
+                        ? vendorData.category
+                        : vendorData.category.split(", ")
+                      ).map((cat) => (
+                        <span
+                          key={cat}
+                          className="bg-rose-50 text-rose-700 text-xs px-2.5 py-1 rounded-full whitespace-nowrap"
+                        >
+                          {cat}
                         </span>
-                        <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
-                      </>
-                    ) : (
-                      <>
-                        <span className="text-gray-400">No category</span>
-                        <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
-                      </>
-                    )}
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-gray-400 mb-2">No category</p>
+                  )}
+
+                  <div className="flex items-center gap-2 text-xs text-gray-500">
+                    <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
                     <span>
                       Member since{" "}
                       {new Date(vendorData.createdAt).toLocaleDateString(
@@ -1282,8 +1366,12 @@ const VendorDashboard = () => {
                     setProductFormData({
                       name: "",
                       type: "",
+                      subType: "",
                       description: "",
                       price: "",
+                      priceFrom: "",
+                      priceTo: "",
+                      link: "",
                     });
                     setProductImagePreview(null);
                     setShowAddProductModal(true);
@@ -1325,10 +1413,20 @@ const VendorDashboard = () => {
                           <p className="text-xs text-gray-500 mb-1">
                             {product.type}
                           </p>
-                          {product.description && (
-                            <p className="text-xs text-gray-600 line-clamp-2">
-                              {product.description}
-                            </p>
+                          <p className="text-xs text-gray-600 line-clamp-2">
+                            {product.description}
+                          </p>
+
+                          {product.productLink && (
+                            <a
+                              href={product.productLink}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 hover:underline mt-1"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                              View Link
+                            </a>
                           )}
                         </div>
 
@@ -1520,13 +1618,23 @@ const VendorDashboard = () => {
                     <Building2 className="w-4 h-4 text-gray-600" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-gray-500 mb-0.5">
-                      Category
+                    <p className="text-xs font-medium text-gray-500 mb-1.5">
+                      Categories
                     </p>
-                    {vendorData.category ? (
-                      <p className="text-sm text-gray-900">
-                        {vendorData.category}
-                      </p>
+                    {vendorData.category && vendorData.category.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {(Array.isArray(vendorData.category)
+                          ? vendorData.category
+                          : vendorData.category.split(", ")
+                        ).map((cat) => (
+                          <span
+                            key={cat}
+                            className="bg-rose-50 text-rose-700 text-xs px-2.5 py-1 rounded-full whitespace-nowrap"
+                          >
+                            {cat}
+                          </span>
+                        ))}
+                      </div>
                     ) : (
                       <p className="text-sm text-gray-400">Not specified</p>
                     )}
@@ -1541,7 +1649,7 @@ const VendorDashboard = () => {
       {/* Add/Edit Product Modal */}
       {showAddProductModal && vendorId && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-hidden shadow-2xl">
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
             {/* Header */}
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
               <div>
@@ -1563,6 +1671,9 @@ const VendorDashboard = () => {
                     type: "",
                     description: "",
                     price: "",
+                    priceFrom: "",
+                    priceTo: "",
+                    link: "",
                   });
                   setProductImagePreview(null);
                   setProductImageFile(null);
@@ -1645,6 +1756,22 @@ const VendorDashboard = () => {
                   </div>
                 </div>
 
+                {/* Sub-Type */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-2">
+                    Sub-Type <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="subType"
+                    value={productFormData.subType}
+                    onChange={handleProductInputChange}
+                    required
+                    className="w-full px-3 py-2 text-sm text-gray-900 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-300 transition-colors"
+                    placeholder="Enter sub-category or specific variant"
+                  />
+                </div>
+
                 {/* Description */}
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-2">
@@ -1690,6 +1817,24 @@ const VendorDashboard = () => {
                       placeholder="To"
                     />
                   </div>
+                </div>
+
+                {/* Product Link */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-2">
+                    Product Link{" "}
+                    <span className="text-gray-400 text-xs font-normal">
+                      Optional
+                    </span>
+                  </label>
+                  <input
+                    type="url"
+                    name="link"
+                    value={productFormData.link}
+                    onChange={handleProductInputChange}
+                    className="w-full px-3 py-2 text-sm text-gray-900 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-300 transition-colors"
+                    placeholder="https://example.com"
+                  />
                 </div>
               </div>
 
@@ -1743,7 +1888,7 @@ const VendorDashboard = () => {
       {/* Edit Profile Modal (Added to Main View) */}
       {showEditProfileModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl max-w-lg w-full max-h-[90vh] overflow-hidden shadow-2xl">
+          <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
             {/* Header */}
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
               <div>

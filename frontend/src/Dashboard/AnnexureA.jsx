@@ -307,17 +307,22 @@ const AnnextureA = ({ activeApplication }) => {
     const currentLocationEntry = {
       location: data.location,
       landmark: data.landmark,
-      locationType: data.locationType, // "indoor", "outdoor", "both" -> Backend might exact "Indoor", "Outdoor" or just string.
+      // "indoor", "outdoor", "both" -> Backend might exact "Indoor", "Outdoor" or just string.
       // Prompt example shows "Public", "Forest", "Road".
       // I'll capitalize or keep as is. Let's capitalized first char.
       // actually prompt example shows "Public", "Forest".
       // The form select has "indoor", "outdoor", "both".
       // I will map to Title Case "Indoor", "Outdoor", "Both".
-      locationType:
-        data.locationType.charAt(0).toUpperCase() + data.locationType.slice(1),
+     locationType: data.locationType
+  ? data.locationType.charAt(0).toUpperCase() +
+    data.locationType.slice(1)
+  : "",
 
       startDateTime: new Date(data.startDateTime).toISOString(),
       endDateTime: new Date(data.endDateTime).toISOString(),
+
+ 
+
 
       crewInvolvement: data.crewPublicInvolvement, // map to 'crewInvolvement'
       personCount: parseInt(data.personCount),
