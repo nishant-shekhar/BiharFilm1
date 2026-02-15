@@ -137,7 +137,7 @@ const ProductionAssets = ({ onClose }) => {
     "Others",
   ];
 
-  const categories = ["All", ...VENDOR_CATEGORIES];
+  const categories = [ ...VENDOR_CATEGORIES,"All"];
 
   const filtered = vendors.filter((v) => {
     const matchesSearch =
