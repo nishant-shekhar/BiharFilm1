@@ -172,7 +172,7 @@ const SignupPage = () => {
           setAlertState((prev) => ({ ...prev, isOpen: false }));
           // Navigate based on role
           if (selectedRole.toLowerCase() === "vendor") {
-            navigate("/vendor-dashboard");
+            navigate("/dashboard-user");
           } else {
             navigate("/dashboard-user");
           }

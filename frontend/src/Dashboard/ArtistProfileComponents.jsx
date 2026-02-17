@@ -194,7 +194,7 @@ export const updateProfile = async (currentArtist, updates) => {
 // ----------------------------------------------------------------------
 // COMPONENT: Video Links Card
 // ----------------------------------------------------------------------
-export const VideoLinksCard = ({ artist, onUpdate }) => {
+export const VideoLinksCard = ({ artist, onUpdate, readOnly = false }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [links, setLinks] = useState(artist.videoLinks || []);
   const [currentLink, setCurrentLink] = useState("");
@@ -298,12 +298,14 @@ export const VideoLinksCard = ({ artist, onUpdate }) => {
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm relative group">
-      <button
-        onClick={() => setIsEditing(true)}
-        className="absolute top-4 right-4 p-1.5 bg-gray-100 rounded-full text-gray-600 hover:text-rose-600 hover:bg-rose-50 transition-all opacity-100 md:opacity-0 group-hover:opacity-100"
-      >
-        <Pencil size={12} />
-      </button>
+      {!readOnly && (
+        <button
+          onClick={() => setIsEditing(true)}
+          className="absolute top-4 right-4 p-1.5 bg-gray-100 rounded-full text-gray-600 hover:text-rose-600 hover:bg-rose-50 transition-all opacity-100 md:opacity-0 group-hover:opacity-100"
+        >
+          <Pencil size={12} />
+        </button>
+      )}
       <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
         Video Showreels
       </h3>
@@ -339,7 +341,7 @@ export const VideoLinksCard = ({ artist, onUpdate }) => {
 // ----------------------------------------------------------------------
 // COMPONENT: Bio Data Card (Using bestFilm field)
 // ----------------------------------------------------------------------
-export const BioDataCard = ({ artist, onUpdate }) => {
+export const BioDataCard = ({ artist, onUpdate, readOnly = false }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -379,12 +381,14 @@ export const BioDataCard = ({ artist, onUpdate }) => {
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm relative group mt-6">
-      <button
-        onClick={() => setIsEditing(!isEditing)}
-        className="absolute top-4 right-4 p-1.5 bg-gray-100 rounded-full text-gray-600 hover:text-rose-600 hover:bg-rose-50 transition-all opacity-100 md:opacity-0 group-hover:opacity-100"
-      >
-        <Pencil size={12} />
-      </button>
+      {!readOnly && (
+        <button
+          onClick={() => setIsEditing(!isEditing)}
+          className="absolute top-4 right-4 p-1.5 bg-gray-100 rounded-full text-gray-600 hover:text-rose-600 hover:bg-rose-50 transition-all opacity-100 md:opacity-0 group-hover:opacity-100"
+        >
+          <Pencil size={12} />
+        </button>
+      )}
 
       <h3 className="text-sm font-bold text-gray-900 mb-4 flex items-center gap-2">
         Bio Data
@@ -413,60 +417,66 @@ export const BioDataCard = ({ artist, onUpdate }) => {
                   </p>
                 </div>
               </a>
-              <button
-                onClick={async () => {
-                  if (
-                    confirm("Are you sure you want to delete your Bio Data?")
-                  ) {
-                    setLoading(true);
-                    try {
-                      // Send empty string to clear the field
-                      console.log("Deleting Bio Data...");
-                      const res = await updateProfile(artist, { bestFilm: "" });
-                      console.log("Delete Response:", res.data);
+              {!readOnly && (
+                <button
+                  onClick={async () => {
+                    if (
+                      confirm("Are you sure you want to delete your Bio Data?")
+                    ) {
+                      setLoading(true);
+                      try {
+                        // Send empty string to clear the field
+                        console.log("Deleting Bio Data...");
+                        const res = await updateProfile(artist, {
+                          bestFilm: "",
+                        });
+                        console.log("Delete Response:", res.data);
 
-                      // Explicitly check if backend cleared it. If not, forcing null for UI update.
-                      const updatedArtist = res.data.data;
-                      if (
-                        !updatedArtist.bestFilm ||
-                        updatedArtist.bestFilm === ""
-                      ) {
-                        onUpdate(updatedArtist);
-                      } else {
-                        // Fallback: If backend sends back the old link, manually clear it for UI
-                        console.warn(
-                          "Backend didn't clear bestFilm, Forcing UI update.",
-                        );
-                        onUpdate({ ...updatedArtist, bestFilm: "" });
+                        // Explicitly check if backend cleared it. If not, forcing null for UI update.
+                        const updatedArtist = res.data.data;
+                        if (
+                          !updatedArtist.bestFilm ||
+                          updatedArtist.bestFilm === ""
+                        ) {
+                          onUpdate(updatedArtist);
+                        } else {
+                          // Fallback: If backend sends back the old link, manually clear it for UI
+                          console.warn(
+                            "Backend didn't clear bestFilm, Forcing UI update.",
+                          );
+                          onUpdate({ ...updatedArtist, bestFilm: "" });
+                        }
+                      } catch (e) {
+                        console.error("Delete failed", e);
+                        alert("Failed to delete Bio Data");
+                      } finally {
+                        setLoading(false);
                       }
-                    } catch (e) {
-                      console.error("Delete failed", e);
-                      alert("Failed to delete Bio Data");
-                    } finally {
-                      setLoading(false);
                     }
-                  }
-                }}
-                disabled={loading}
-                className="p-3 rounded-xl bg-gray-50 text-gray-400 hover:bg-rose-50 hover:text-rose-600 border border-gray-100 transition-colors"
-                title="Delete Bio Data"
-              >
-                {loading ? (
-                  <Loader className="animate-spin" size={18} />
-                ) : (
-                  <Trash2 size={18} />
-                )}
-              </button>
+                  }}
+                  disabled={loading}
+                  className="p-3 rounded-xl bg-gray-50 text-gray-400 hover:bg-rose-50 hover:text-rose-600 border border-gray-100 transition-colors"
+                  title="Delete Bio Data"
+                >
+                  {loading ? (
+                    <Loader className="animate-spin" size={18} />
+                  ) : (
+                    <Trash2 size={18} />
+                  )}
+                </button>
+              )}
             </div>
           ) : (
-            <div className="flex justify-center">
-              <button
-                onClick={() => setIsEditing(true)}
-                className="text-xs font-medium text-[#891737] hover:underline flex items-center gap-1"
-              >
-                <Plus size={14} /> Add Bio Data
-              </button>
-            </div>
+            !readOnly && (
+              <div className="flex justify-center">
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="text-xs font-medium text-[#891737] hover:underline flex items-center gap-1"
+                >
+                  <Plus size={14} /> Add Bio Data
+                </button>
+              </div>
+            )
           )}
         </>
       )}
@@ -554,7 +564,7 @@ const getSmartUrl = (platform, value) => {
   return prefixes[platform] ? `${prefixes[platform]}${clean}` : clean;
 };
 
-export const SocialMediaCard = ({ artist, onUpdate }) => {
+export const SocialMediaCard = ({ artist, onUpdate, readOnly = false }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [socials, setSocials] = useState({
     facebook: artist.facebook || "",
@@ -643,12 +653,14 @@ export const SocialMediaCard = ({ artist, onUpdate }) => {
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm sticky top-24 relative group">
-      <button
-        onClick={() => setIsEditing(true)}
-        className="absolute top-4 right-4 p-1.5 bg-gray-100 rounded-full text-gray-600 hover:text-rose-600 hover:bg-rose-50 transition-all opacity-100 md:opacity-0 group-hover:opacity-100"
-      >
-        <Pencil size={12} />
-      </button>
+      {!readOnly && (
+        <button
+          onClick={() => setIsEditing(true)}
+          className="absolute top-4 right-4 p-1.5 bg-gray-100 rounded-full text-gray-600 hover:text-rose-600 hover:bg-rose-50 transition-all opacity-100 md:opacity-0 group-hover:opacity-100"
+        >
+          <Pencil size={12} />
+        </button>
+      )}
 
       <h3 className="text-sm font-bold text-gray-900 mb-4">Social Media</h3>
       <div className="grid grid-cols-5 gap-2">
@@ -711,7 +723,7 @@ export const SocialMediaCard = ({ artist, onUpdate }) => {
 // ----------------------------------------------------------------------
 // COMPONENT: About Me Card (Bio + Professions + Specializations)
 // ----------------------------------------------------------------------
-export const AboutMeCard = ({ artist, onUpdate }) => {
+export const AboutMeCard = ({ artist, onUpdate, readOnly = false }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     description: artist.description || "",
@@ -998,12 +1010,14 @@ export const AboutMeCard = ({ artist, onUpdate }) => {
 
   return (
     <section className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm relative group">
-      <button
-        onClick={() => setIsEditing(true)}
-        className="absolute top-4 right-4 p-1.5 bg-gray-100 rounded-full text-gray-600 hover:text-rose-600 hover:bg-rose-50 transition-all opacity-100 md:opacity-0 group-hover:opacity-100"
-      >
-        <Pencil size={14} />
-      </button>
+      {!readOnly && (
+        <button
+          onClick={() => setIsEditing(true)}
+          className="absolute top-4 right-4 p-1.5 bg-gray-100 rounded-full text-gray-600 hover:text-rose-600 hover:bg-rose-50 transition-all opacity-100 md:opacity-0 group-hover:opacity-100"
+        >
+          <Pencil size={14} />
+        </button>
+      )}
 
       <h3 className="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
         About Me
@@ -1037,7 +1051,7 @@ export const AboutMeCard = ({ artist, onUpdate }) => {
 // ----------------------------------------------------------------------
 // COMPONENT: Gallery Card
 // ----------------------------------------------------------------------
-export const GalleryCard = ({ artist, onUpdate }) => {
+export const GalleryCard = ({ artist, onUpdate, readOnly = false }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [existing, setExisting] = useState([]);
   const [newFiles, setNewFiles] = useState([]);
@@ -1230,12 +1244,14 @@ export const GalleryCard = ({ artist, onUpdate }) => {
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm relative group">
-      <button
-        onClick={() => setIsEditing(true)}
-        className="absolute top-4 right-4 p-2 bg-gray-50 rounded-full text-gray-500 hover:text-[#891737] hover:bg-[#891737]/5 transition-all opacity-0 group-hover:opacity-100"
-      >
-        <Pencil size={14} />
-      </button>
+      {!readOnly && (
+        <button
+          onClick={() => setIsEditing(true)}
+          className="absolute top-4 right-4 p-2 bg-gray-50 rounded-full text-gray-500 hover:text-[#891737] hover:bg-[#891737]/5 transition-all opacity-0 group-hover:opacity-100"
+        >
+          <Pencil size={14} />
+        </button>
+      )}
       <h3 className="text-base font-bold text-gray-900 mb-6 flex items-center gap-2">
         Gallery
       </h3>
@@ -1276,7 +1292,7 @@ export const GalleryCard = ({ artist, onUpdate }) => {
 // ----------------------------------------------------------------------
 // COMPONENT: Experience Card
 // ----------------------------------------------------------------------
-export const ExperienceCard = ({ artist, onUpdate }) => {
+export const ExperienceCard = ({ artist, onUpdate, readOnly = false }) => {
   const [isAdding, setIsAdding] = useState(false);
   const [loading, setLoading] = useState(false);
   const [newExp, setNewExp] = useState({
@@ -1292,9 +1308,6 @@ export const ExperienceCard = ({ artist, onUpdate }) => {
   const handleChange = (e) =>
     setNewExp({ ...newExp, [e.target.name]: e.target.value });
 
-  /* ----------------------------------------------------------------------
-   * EDIT & DELETE Handlers
-   * ---------------------------------------------------------------------- */
   /* ----------------------------------------------------------------------
    * EDIT & DELETE Handlers
    * ---------------------------------------------------------------------- */
@@ -1464,7 +1477,7 @@ export const ExperienceCard = ({ artist, onUpdate }) => {
         <h3 className="text-base font-bold text-gray-900 flex items-center gap-2">
           Experience
         </h3>
-        {!isAdding && (
+        {!isAdding && !readOnly && (
           <button
             onClick={() => setIsAdding(true)}
             className="text-xs font-medium text-gray-500 hover:text-gray-900 hover:bg-gray-50 px-3 py-1.5 rounded-md transition-colors flex items-center gap-1.5"
@@ -1604,22 +1617,24 @@ export const ExperienceCard = ({ artist, onUpdate }) => {
               <div className="absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full bg-gray-300 border-2 border-white ring-1 ring-gray-100 group-hover:bg-gray-900 group-hover:ring-gray-200 transition-all"></div>
 
               {/* ACTION BUTTONS (Edit/Delete) */}
-              <div className="absolute right-0 top-0 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                <button
-                  onClick={() => handleEditClick(i, exp)}
-                  className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
-                  title="Edit Experience"
-                >
-                  <Pencil size={14} />
-                </button>
-                <button
-                  onClick={() => handleDeleteExperience(i)}
-                  className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
-                  title="Delete Experience"
-                >
-                  <Trash2 size={14} />
-                </button>
-              </div>
+              {!readOnly && (
+                <div className="absolute right-0 top-0 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                  <button
+                    onClick={() => handleEditClick(i, exp)}
+                    className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                    title="Edit Experience"
+                  >
+                    <Pencil size={14} />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteExperience(i)}
+                    className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                    title="Delete Experience"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              )}
 
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-1">
                 <div>

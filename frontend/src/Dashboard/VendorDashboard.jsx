@@ -60,6 +60,30 @@ const VENDOR_CATEGORIES = [
 
 const ITEMS_PER_PAGE = 5; // ✅ Pagination Limit
 
+// ✅ Extract Categories Helper
+const extractCategories = (data) => {
+  if (!data) return [];
+
+  // Check for 'categories' array of objects (new structure)
+  if (Array.isArray(data.categories)) {
+    return data.categories
+      .map((c) => (typeof c === "object" ? c.category?.name : c))
+      .filter(Boolean);
+  }
+
+  // Check for 'category' array of strings (old structure)
+  if (Array.isArray(data.category)) {
+    return data.category;
+  }
+
+  // Check for 'category' comma-separated string (old structure)
+  if (typeof data.category === "string") {
+    return data.category.split(", ").filter((c) => c);
+  }
+
+  return [];
+};
+
 const VendorDashboard = () => {
   const [vendorId, setVendorId] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -223,20 +247,8 @@ const VendorDashboard = () => {
           const result = response.data;
           console.log("✅ Vendor profile fetched:", result.data);
 
-          // Convert category to array FIRST
-          let categoryArray = [];
-          if (Array.isArray(result.data.categories)) {
-            // New structure: array of objects with category.name
-            categoryArray = result.data.categories
-              .map((c) => c.category?.name)
-              .filter(Boolean);
-          } else if (Array.isArray(result.data.category)) {
-            // Old structure: array of strings
-            categoryArray = result.data.category;
-          } else if (result.data.category) {
-            // Old structure: comma-separated string
-            categoryArray = result.data.category.split(", ").filter((c) => c);
-          }
+          // Use helper to extract categories consistently
+          const categoryArray = extractCategories(result.data);
 
           // Set vendorData with converted category
           setVendorData({
@@ -370,13 +382,12 @@ const VendorDashboard = () => {
 
         setVendorId(result.data.id);
 
-        const categoryArray = Array.isArray(result.data.category)
-          ? result.data.category
-          : result.data.category
-            ? result.data.category.split(", ").filter((c) => c)
-            : [];
+        const categoryArray = extractCategories(result.data);
 
-        setVendorData(result.data);
+        setVendorData({
+          ...result.data,
+          category: categoryArray,
+        });
         setProfileFormData({
           vendorName: result.data.vendorName || "",
           category: categoryArray,
@@ -398,9 +409,6 @@ const VendorDashboard = () => {
           autoClose: true,
           duration: 3000,
         });
-      } else if (response.status === 400) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Failed to create profile");
       } else {
         const errorData = response.data;
         throw new Error(errorData.message || "Failed to create profile");
@@ -478,11 +486,7 @@ const VendorDashboard = () => {
         const result = response.data;
         console.log("✅ Vendor updated:", result.data);
 
-        const categoryArray = Array.isArray(result.data.category)
-          ? result.data.category
-          : result.data.category
-            ? result.data.category.split(", ").filter((c) => c)
-            : [];
+        const categoryArray = extractCategories(result.data);
 
         // Update vendorData with converted category array
         setVendorData({
@@ -607,7 +611,10 @@ const VendorDashboard = () => {
 
         if (refreshResponse.status >= 200 && refreshResponse.status < 300) {
           const refreshResult = refreshResponse.data;
-          setVendorData(refreshResult.data);
+          setVendorData({
+            ...refreshResult.data,
+            category: extractCategories(refreshResult.data),
+          });
           setStats((prev) => ({
             ...prev,
             totalProducts: refreshResult.data.products?.length || 0,
@@ -644,9 +651,11 @@ const VendorDashboard = () => {
           confirmText: "OK",
         });
       } else {
-        const errorText = await response.text();
-        console.error("Error response:", errorText);
-        throw new Error(`Failed to add product: ${response.status}`);
+        const errorData = response.data;
+        console.error("Error response:", errorData);
+        throw new Error(
+          errorData?.message || `Failed to add product: ${response.status}`,
+        );
       }
     } catch (err) {
       console.error("Error adding product:", err);
@@ -688,7 +697,10 @@ const VendorDashboard = () => {
 
             if (refreshResponse.status >= 200 && refreshResponse.status < 300) {
               const refreshResult = refreshResponse.data;
-              setVendorData(refreshResult.data);
+              setVendorData({
+                ...refreshResult.data,
+                category: extractCategories(refreshResult.data),
+              });
               setStats((prev) => ({
                 ...prev,
                 totalProducts: refreshResult.data.products?.length || 0,
@@ -1269,10 +1281,7 @@ const VendorDashboard = () => {
                   {/* Categories as Chips */}
                   {vendorData.category && vendorData.category.length > 0 ? (
                     <div className="flex flex-wrap gap-2 mb-2">
-                      {(Array.isArray(vendorData.category)
-                        ? vendorData.category
-                        : vendorData.category.split(", ")
-                      ).map((cat) => (
+                      {vendorData.category.map((cat) => (
                         <span
                           key={cat}
                           className="bg-rose-50 text-rose-700 text-xs px-2.5 py-1 rounded-full whitespace-nowrap"
