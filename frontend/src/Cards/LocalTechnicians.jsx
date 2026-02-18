@@ -33,8 +33,7 @@ const Disclaimer = () => (
           Disclaimer:
         </span>
         The information and data displayed on this portal are provided solely by
-        the respective individuals/applicants and have not been independently
-        verified by the Department. The Department makes no representations or
+        the respective individuals/applicants. The Department makes no representations or
         warranties regarding the accuracy, completeness, or reliability of the
         submitted information and shall not be held responsible or liable for
         any errors, omissions, or claims arising from its use.
@@ -332,7 +331,7 @@ const Security = ({ onClose }) => {
         <div className="lg:hidden sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-gray-100 px-4 py-3 flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-bold text-gray-900">
-              Local Technicians
+              Local Technicians & Manpower
             </h2>
             <span className="text-xs text-gray-500">
               {filtered.length} profiles
@@ -382,7 +381,7 @@ const Security = ({ onClose }) => {
               <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 pb-4 border-b border-gray-100">
                 <div>
                   <h2 className="text-xl font-bold text-gray-700 tracking-tight leading-none mb-2">
-                    Local Technicians
+                    Local Technicians & Manpower
                   </h2>
                   <p className="text-xs text-gray-400">
                     Official BSFDFC Registry

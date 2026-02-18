@@ -35,8 +35,7 @@ const Disclaimer = () => (
           Disclaimer:
         </span>
         The information and data displayed on this portal are provided solely by
-        the respective individuals/applicants and have not been independently
-        verified by the Department. The Department makes no representations or
+        the respective individuals/applicants . The Department makes no representations or
         warranties regarding the accuracy, completeness, or reliability of the
         submitted information and shall not be held responsible or liable for
         any errors, omissions, or claims arising from its use.

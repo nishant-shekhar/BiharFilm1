@@ -257,7 +257,7 @@ export const VideoLinksCard = ({ artist, onUpdate, readOnly = false }) => {
             <input
               value={currentLink}
               onChange={(e) => setCurrentLink(e.target.value)}
-              placeholder="Youtube/Vimeo Link"
+              placeholder="Video Link"
               className="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:border-rose-500"
             />
             <button
@@ -733,6 +733,7 @@ export const AboutMeCard = ({ artist, onUpdate, readOnly = false }) => {
 
   useEffect(() => {
     setFormData({
+      description: artist.description || "",
       description: artist.description || "",
     });
   }, [artist]);

@@ -120,7 +120,7 @@ function Cinemaecosystem() {
         <div className="w-full md:basis-1/3 md:max-w-[32%]">
           <Longcards
             imageUrl="/securityEcosystem.png"
-            title="Local Technicians"
+            title="Local Technicians & Manpower"
             description="Ensure a secure filming environment with professional safety services and on-location security management."
             onClick={() => handleCardClick("security")}
           />

@@ -307,7 +307,6 @@ const AnnextureA = ({ activeApplication }) => {
     const currentLocationEntry = {
       location: data.location,
       landmark: data.landmark,
-      locationType: data.locationType, // "indoor", "outdoor", "both" -> Backend might exact "Indoor", "Outdoor" or just string.
       // Prompt example shows "Public", "Forest", "Road".
       // I'll capitalize or keep as is. Let's capitalized first char.
       // actually prompt example shows "Public", "Forest".
