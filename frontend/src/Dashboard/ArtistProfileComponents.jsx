@@ -727,58 +727,16 @@ export const AboutMeCard = ({ artist, onUpdate, readOnly = false }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     description: artist.description || "",
-    professions:
-      artist.professions?.map((p) => (typeof p === "object" ? p.name : p)) ||
-      [],
-    specializations:
-      artist.specializations?.map((s) =>
-        typeof s === "object" ? s.name : s,
-      ) || [],
   });
 
-  const [selectedCategory, setSelectedCategory] = useState("");
-  const [currentProfession, setCurrentProfession] = useState("");
-  const [otherProfession, setOtherProfession] = useState("");
-  const [currentSpecialization, setCurrentSpecialization] = useState("");
-  const [otherSpecialization, setOtherSpecialization] = useState("");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     setFormData({
       description: artist.description || "",
-      professions:
-        artist.professions?.map((p) => (typeof p === "object" ? p.name : p)) ||
-        [],
-      specializations:
-        artist.specializations?.map((s) =>
-          typeof s === "object" ? s.name : s,
-        ) || [],
+      description: artist.description || "",
     });
   }, [artist]);
-
-  // Determine initial category
-  useEffect(() => {
-    if (isEditing && !selectedCategory && formData.professions.length > 0) {
-      const hasArtist = formData.professions.some((p) =>
-        ARTIST_ROLES.includes(p),
-      );
-      if (hasArtist) setSelectedCategory("Artist");
-      else {
-        const hasTech = formData.professions.some((p) =>
-          TECHNICIAN_ROLES.includes(p),
-        );
-        if (hasTech) setSelectedCategory("Technician");
-      }
-    }
-  }, [isEditing, formData.professions]);
-
-  const availableSpecializations = React.useMemo(() => {
-    if (!formData.professions.length) return PREDEFINED_SPECIALIZATIONS;
-    const relevant = formData.professions.flatMap(
-      (p) => ROLE_SPECIALIZATIONS[p] || [],
-    );
-    return relevant.length > 0 ? [...new Set(relevant), "Others"] : ["Others"];
-  }, [formData.professions]);
 
   const handleSave = async () => {
     setLoading(true);
@@ -791,15 +749,6 @@ export const AboutMeCard = ({ artist, onUpdate, readOnly = false }) => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const addTag = (field, val, list, setter) => {
-    if (val && !list.includes(val))
-      setter({ ...formData, [field]: [...list, val] });
-  };
-  const removeTag = (field, idx) => {
-    const list = formData[field];
-    setFormData({ ...formData, [field]: list.filter((_, i) => i !== idx) });
   };
 
   if (isEditing) {
@@ -825,175 +774,6 @@ export const AboutMeCard = ({ artist, onUpdate, readOnly = false }) => {
               rows={4}
               className="w-full p-2 border border-gray-300 rounded-lg text-sm outline-none focus:border-[#891737]"
             />
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-2">
-              Category & Professions
-            </label>
-            <div className="flex gap-4 mb-2">
-              {["Artist", "Technician"].map((cat) => (
-                <label
-                  key={cat}
-                  className="flex items-center gap-2 cursor-pointer"
-                >
-                  <input
-                    type="radio"
-                    checked={selectedCategory === cat}
-                    onChange={() => {
-                      setSelectedCategory(cat);
-                      setCurrentProfession("");
-                    }}
-                    className="text-[#891737] focus:ring-[#891737]"
-                  />
-                  <span className="text-sm">{cat}</span>
-                </label>
-              ))}
-            </div>
-
-            <div className="flex gap-2 mb-2">
-              <select
-                value={currentProfession}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (val === "Others") setCurrentProfession("Others");
-                  else {
-                    addTag(
-                      "professions",
-                      val,
-                      formData.professions,
-                      setFormData,
-                    );
-                    setCurrentProfession("");
-                  }
-                }}
-                disabled={!selectedCategory}
-                className="p-2 border border-gray-300 rounded-lg text-sm flex-1 outline-none"
-              >
-                <option value="">Select Profession</option>
-                {selectedCategory === "Artist" &&
-                  ARTIST_ROLES.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                {selectedCategory === "Technician" &&
-                  TECHNICIAN_ROLES.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-              </select>
-              {currentProfession === "Others" && (
-                <div className="flex gap-2 flex-1">
-                  <input
-                    value={otherProfession}
-                    onChange={(e) => setOtherProfession(e.target.value)}
-                    placeholder="Specify"
-                    className="p-2 border rounded text-sm w-full"
-                  />
-                  <button
-                    onClick={() => {
-                      addTag(
-                        "professions",
-                        otherProfession,
-                        formData.professions,
-                        setFormData,
-                      );
-                      setOtherProfession("");
-                      setCurrentProfession("");
-                    }}
-                    className="bg-black text-white px-3 rounded text-xs"
-                  >
-                    Add
-                  </button>
-                </div>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {formData.professions.map((p, i) => (
-                <span
-                  key={i}
-                  className="bg-gray-100 px-2 py-1 rounded text-xs flex items-center gap-1"
-                >
-                  {p}{" "}
-                  <button onClick={() => removeTag("professions", i)}>
-                    <X size={10} />
-                  </button>
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-2">
-              Specializations
-            </label>
-            <div className="flex gap-2 mb-2">
-              <select
-                value={currentSpecialization}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  if (val === "Others") setCurrentSpecialization("Others");
-                  else {
-                    addTag(
-                      "specializations",
-                      val,
-                      formData.specializations,
-                      setFormData,
-                    );
-                    setCurrentSpecialization("");
-                  }
-                }}
-                disabled={!formData.professions.length}
-                className="p-2 border border-gray-300 rounded-lg text-sm flex-1 outline-none"
-              >
-                <option value="">Select Specialization</option>
-                {availableSpecializations.map((s) => (
-                  <option key={s} value={s}>
-                    {s}
-                  </option>
-                ))}
-              </select>
-              {currentSpecialization === "Others" && (
-                <div className="flex gap-2 flex-1">
-                  <input
-                    value={otherSpecialization}
-                    onChange={(e) => setOtherSpecialization(e.target.value)}
-                    placeholder="Specify"
-                    className="p-2 border rounded text-sm w-full"
-                  />
-                  <button
-                    onClick={() => {
-                      addTag(
-                        "specializations",
-                        otherSpecialization,
-                        formData.specializations,
-                        setFormData,
-                      );
-                      setOtherSpecialization("");
-                      setCurrentSpecialization("");
-                    }}
-                    className="bg-black text-white px-3 rounded text-xs"
-                  >
-                    Add
-                  </button>
-                </div>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {formData.specializations.map((s, i) => (
-                <span
-                  key={i}
-                  className="bg-gray-100 px-2 py-1 rounded text-xs flex items-center gap-1"
-                >
-                  {s}{" "}
-                  <button onClick={() => removeTag("specializations", i)}>
-                    <X size={10} />
-                  </button>
-                </span>
-              ))}
-            </div>
           </div>
 
           <button
@@ -1737,7 +1517,18 @@ export const EditProfileModal = ({
     showPhonePublic:
       base.showPhonePublic === true || base.showPhonePublic === "true",
     image: null,
+    professions:
+      base.professions?.map((p) => (typeof p === "object" ? p.name : p)) || [],
+    specializations:
+      base.specializations?.map((s) => (typeof s === "object" ? s.name : s)) ||
+      [],
   });
+
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [currentProfession, setCurrentProfession] = useState("");
+  const [otherProfession, setOtherProfession] = useState("");
+  const [currentSpecialization, setCurrentSpecialization] = useState("");
+  const [otherSpecialization, setOtherSpecialization] = useState("");
 
   // For edit mode, we show existing image. For create, it starts null.
   const [previewImage, setPreviewImage] = useState(base.image || null);
@@ -1771,6 +1562,42 @@ export const EditProfileModal = ({
     };
     fetchAuthDetails();
   }, [isCreating]);
+
+  // Determine initial category
+  useEffect(() => {
+    if (!selectedCategory && formData.professions.length > 0) {
+      const hasArtist = formData.professions.some((p) =>
+        ARTIST_ROLES.includes(p),
+      );
+      if (hasArtist) setSelectedCategory("Artist");
+      else {
+        const hasTech = formData.professions.some((p) =>
+          TECHNICIAN_ROLES.includes(p),
+        );
+        if (hasTech) setSelectedCategory("Technician");
+      }
+    }
+  }, [formData.professions]);
+
+  const availableSpecializations = React.useMemo(() => {
+    if (!formData.professions.length) return PREDEFINED_SPECIALIZATIONS;
+    const relevant = formData.professions.flatMap(
+      (p) => ROLE_SPECIALIZATIONS[p] || [],
+    );
+    return relevant.length > 0 ? [...new Set(relevant), "Others"] : ["Others"];
+  }, [formData.professions]);
+
+  const addTag = (field, val, list, setter) => {
+    if (val && !list.includes(val))
+      setter((prev) => ({ ...prev, [field]: [...list, val] }));
+  };
+  const removeTag = (field, idx) => {
+    const list = formData[field];
+    setFormData((prev) => ({
+      ...prev,
+      [field]: list.filter((_, i) => i !== idx),
+    }));
+  };
 
   // ✅ changed: phone number max 12 digits + numeric only
   const handleChange = (e) => {
@@ -1863,9 +1690,28 @@ export const EditProfileModal = ({
             data.append("image", val);
           }
         } else if (val !== undefined && val !== null && val !== "") {
-          data.append(key, val);
+          if (key === "professions" || key === "specializations") {
+            // Arrays are handled separately below to ensure correct format if needed,
+            // but formData already has them as arrays.
+            // We need to match updateProfile logic which stringifies them.
+            // However, looking at updateProfile, it appends them as JSON strings.
+            // Let's check how the backend expects them for creating/updating.
+            // updateProfile does: data.append("professions", JSON.stringify(cleanProfessions));
+            // standard append handles string conversion, but we probably want JSON.stringify for arrays.
+            // Actually, we should probably skip appending them here in the loop
+            // and handle them explicitly like in updateProfile helper if we want consistency.
+            // But let's check the existing code. `updateProfile` helper handles it.
+            // Here we are manually building FormData.
+            // We should use JSON.stringify for these arrays.
+          } else {
+            data.append(key, val);
+          }
         }
       });
+
+      // Explicitly append arrays as JSON strings
+      data.append("professions", JSON.stringify(formData.professions));
+      data.append("specializations", JSON.stringify(formData.specializations));
 
       // Debugging: Log what's being sent
       console.log("📤 Submitting Profile Update:");
@@ -2130,6 +1976,193 @@ export const EditProfileModal = ({
                     <option value="Female">Female</option>
                     <option value="Other">Other</option>
                   </select>
+                </div>
+
+                {/* Professions & Specializations */}
+                <div className="md:col-span-2 space-y-4 border-t border-gray-100 pt-4 mt-2">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Profession / Role *
+                    </label>
+                    <div className="flex gap-4 mb-3">
+                      {["Artist", "Technician"].map((cat) => (
+                        <label
+                          key={cat}
+                          className="flex items-center gap-2 cursor-pointer"
+                        >
+                          <input
+                            type="radio"
+                            checked={selectedCategory === cat}
+                            onChange={() => {
+                              setSelectedCategory(cat);
+                              setCurrentProfession("");
+                            }}
+                            className="text-[#891737] focus:ring-[#891737]"
+                          />
+                          <span className="text-sm font-medium text-gray-700">
+                            {cat}
+                          </span>
+                        </label>
+                      ))}
+                    </div>
+
+                    <div className="flex gap-2 mb-2">
+                      <select
+                        value={currentProfession}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === "Others") setCurrentProfession("Others");
+                          else {
+                            addTag(
+                              "professions",
+                              val,
+                              formData.professions,
+                              setFormData,
+                            );
+                            setCurrentProfession("");
+                          }
+                        }}
+                        disabled={!selectedCategory}
+                        className="p-2 border border-gray-300 rounded-lg text-sm flex-1 outline-none focus:border-[#891737]"
+                      >
+                        <option value="">Select Profession</option>
+                        {selectedCategory === "Artist" &&
+                          ARTIST_ROLES.map((r) => (
+                            <option key={r} value={r}>
+                              {r}
+                            </option>
+                          ))}
+                        {selectedCategory === "Technician" &&
+                          TECHNICIAN_ROLES.map((r) => (
+                            <option key={r} value={r}>
+                              {r}
+                            </option>
+                          ))}
+                      </select>
+                      {currentProfession === "Others" && (
+                        <div className="flex gap-2 flex-1">
+                          <input
+                            value={otherProfession}
+                            onChange={(e) => setOtherProfession(e.target.value)}
+                            placeholder="Specify"
+                            className="p-2 border border-gray-300 rounded-lg text-sm w-full outline-none focus:border-[#891737]"
+                          />
+                          <button
+                            onClick={() => {
+                              addTag(
+                                "professions",
+                                otherProfession,
+                                formData.professions,
+                                setFormData,
+                              );
+                              setOtherProfession("");
+                              setCurrentProfession("");
+                            }}
+                            type="button"
+                            className="bg-black text-white px-3 rounded-lg text-xs hover:bg-gray-800 transition-colors"
+                          >
+                            Add
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {formData.professions.map((p, i) => (
+                        <span
+                          key={i}
+                          className="bg-rose-50 text-rose-700 px-2.5 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 border border-rose-100"
+                        >
+                          {p}{" "}
+                          <button
+                            type="button"
+                            onClick={() => removeTag("professions", i)}
+                            className="hover:text-rose-900"
+                          >
+                            <X size={12} />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Specializations *
+                    </label>
+                    <div className="flex gap-2 mb-2">
+                      <select
+                        value={currentSpecialization}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === "Others")
+                            setCurrentSpecialization("Others");
+                          else {
+                            addTag(
+                              "specializations",
+                              val,
+                              formData.specializations,
+                              setFormData,
+                            );
+                            setCurrentSpecialization("");
+                          }
+                        }}
+                        disabled={!formData.professions.length}
+                        className="p-2 border border-gray-300 rounded-lg text-sm flex-1 outline-none focus:border-[#891737]"
+                      >
+                        <option value="">Select Specialization</option>
+                        {availableSpecializations.map((s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+                      </select>
+                      {currentSpecialization === "Others" && (
+                        <div className="flex gap-2 flex-1">
+                          <input
+                            value={otherSpecialization}
+                            onChange={(e) =>
+                              setOtherSpecialization(e.target.value)
+                            }
+                            placeholder="Specify"
+                            className="p-2 border border-gray-300 rounded-lg text-sm w-full outline-none focus:border-[#891737]"
+                          />
+                          <button
+                            onClick={() => {
+                              addTag(
+                                "specializations",
+                                otherSpecialization,
+                                formData.specializations,
+                                setFormData,
+                              );
+                              setOtherSpecialization("");
+                              setCurrentSpecialization("");
+                            }}
+                            type="button"
+                            className="bg-black text-white px-3 rounded-lg text-xs hover:bg-gray-800 transition-colors"
+                          >
+                            Add
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {formData.specializations.map((s, i) => (
+                        <span
+                          key={i}
+                          className="bg-gray-100 text-gray-700 px-2.5 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 border border-gray-200"
+                        >
+                          {s}{" "}
+                          <button
+                            type="button"
+                            onClick={() => removeTag("specializations", i)}
+                            className="hover:text-gray-900"
+                          >
+                            <X size={12} />
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                 </div>
 
                 <div className="md:col-span-2">

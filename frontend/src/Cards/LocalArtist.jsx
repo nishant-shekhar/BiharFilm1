@@ -54,6 +54,7 @@ const LocalArtist = ({ onClose }) => {
 
   // Categories List
   const categories = [
+    "All",
     "Actor/Actress",
     "Anchor",
     "Voice Artist (Dubbing)",
@@ -71,8 +72,6 @@ const LocalArtist = ({ onClose }) => {
     "Group Dancer Male",
     "Group Dancer Female",
     "Other",
-        "All",
-
   ];
 
   useEffect(() => {
@@ -231,7 +230,7 @@ const LocalArtist = ({ onClose }) => {
       </button>
 
       {/* LEFT SIDEBAR - Fixed Width */}
-      <div className="w-72 border-r border-gray-100 bg-white/50 backdrop-blur-xl h-screen sticky top-0 flex-col z-40 hidden lg:flex">
+      <div className="w-72 border-r border-gray-100 bg-white/50 backdrop-blur-xl h-screen sticky top-0 flex flex-col z-40 hidden lg:flex">
         {/* Sidebar Header */}
         <div className="p-4 border-b border-gray-100/50">
           {/* Search Bar - Smaller Size */}

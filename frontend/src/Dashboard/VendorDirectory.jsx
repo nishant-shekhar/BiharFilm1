@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from "react";
+// VendorDirectory.jsx
+import React, { useEffect, useMemo, useState } from "react";
 import api from "../Components/axios";
 import {
   Building2,
@@ -12,18 +13,14 @@ import {
   AlertCircle,
   CheckCircle,
   Clock,
-  LayoutGrid,
-  LayoutList,
-  Calendar,
-  Tag,
   ShieldCheck,
   AlertTriangle,
   Filter,
-  ArrowUpDown,
   RefreshCcw,
   Pencil,
   Trash2,
   ExternalLink,
+  Layers,
 } from "lucide-react";
 import AddVendorForm from "./AddVendorForm";
 import DownloadExcel from "../Components/DownloadExcel";
@@ -42,11 +39,13 @@ const CATEGORIES = [
   "Other",
 ];
 
+const isVerifiedVendor = (v) => v.verified === true || v.verified === 1;
+const isVerifiedProduct = (p) => p?.verified === true || p?.verified === 1;
+
 const VendorDirectory = ({ searchQuery }) => {
   const [adminVendors, setAdminVendors] = useState([]);
   const [vendors, setVendors] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("");
-
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [loading, setLoading] = useState(false);
   const [selectedVendor, setSelectedVendor] = useState(null);
@@ -59,10 +58,13 @@ const VendorDirectory = ({ searchQuery }) => {
   const [adminLoading, setAdminLoading] = useState(false);
   const [selectedVendorIds, setSelectedVendorIds] = useState([]);
 
+  // ✅ NEW: Product verification state
+  const [productStatusFilter, setProductStatusFilter] = useState("all"); // all | verified | pending
+  const [productActionLoadingId, setProductActionLoadingId] = useState(null);
+
   const handleSelectAll = (e) => {
     if (e.target.checked) {
-      const sourceList =
-        activeTab === "admin" ? filteredAdminVendors : filteredVendors;
+      const sourceList = activeTab === "admin" ? filteredAdminVendors : filteredVendors;
       const allIds = sourceList.map((v) => v.id);
       setSelectedVendorIds(allIds);
     } else {
@@ -75,18 +77,14 @@ const VendorDirectory = ({ searchQuery }) => {
     if (e.target.checked) {
       setSelectedVendorIds((prev) => [...prev, id]);
     } else {
-      setSelectedVendorIds((prev) =>
-        prev.filter((vendorId) => vendorId !== id),
-      );
+      setSelectedVendorIds((prev) => prev.filter((vendorId) => vendorId !== id));
     }
   };
 
   const fetchVendors = async () => {
     try {
       setLoading(true);
-      console.log("Fetching public vendors...");
       const res = await api.get("/api/vendor/getvendors");
-      console.log("Public vendors received:", res.data);
       setVendors(res.data.data || []);
     } catch (err) {
       console.error("Failed to fetch vendors:", err);
@@ -98,9 +96,7 @@ const VendorDirectory = ({ searchQuery }) => {
   const fetchAdminVendors = async () => {
     try {
       setAdminLoading(true);
-      console.log("Fetching admin vendor registry...");
       const res = await api.get("/api/admin/vendor/allVendorsAdmin");
-      console.log("Admin vendors received:", res.data);
       setAdminVendors(res.data.data || []);
     } catch (err) {
       console.error("Failed to fetch admin vendors:", err);
@@ -118,73 +114,66 @@ const VendorDirectory = ({ searchQuery }) => {
     if (activeTab === "admin" && adminVendors.length === 0) {
       fetchAdminVendors();
     }
-  }, [activeTab]);
+  }, [activeTab]); // eslint-disable-line
 
-  const filteredVendors = vendors.filter((vendor) => {
-    const matchesCategory = selectedCategory
-      ? vendor.category === selectedCategory
-      : true;
-    if (!searchQuery) return matchesCategory;
-    const query = searchQuery.toLowerCase();
+  const filteredVendors = useMemo(() => {
+    return vendors.filter((vendor) => {
+      const matchesCategory = selectedCategory ? vendor.category === selectedCategory : true;
 
-    const matchesStatus =
-      selectedStatus === "all"
-        ? true
-        : selectedStatus === "verified"
-          ? isVerified(vendor)
-          : !isVerified(vendor);
+      const matchesStatus =
+        selectedStatus === "all"
+          ? true
+          : selectedStatus === "verified"
+          ? isVerifiedVendor(vendor)
+          : !isVerifiedVendor(vendor);
 
-    return (
-      matchesCategory &&
-      matchesStatus &&
-      (vendor.vendorName?.toLowerCase().includes(query) ||
-        vendor.category?.toLowerCase().includes(query) ||
-        vendor.address?.toLowerCase().includes(query) ||
-        vendor.email?.toLowerCase().includes(query))
-    );
-  });
+      if (!searchQuery) return matchesCategory && matchesStatus;
 
-  const filteredAdminVendors = adminVendors.filter((vendor) => {
-    const matchesCategory = selectedCategory
-      ? vendor.category === selectedCategory
-      : true;
-    if (!searchQuery) return matchesCategory;
-    const query = searchQuery.toLowerCase();
-    return (
-      matchesCategory &&
-      (vendor.vendorName?.toLowerCase().includes(query) ||
-        vendor.category?.toLowerCase().includes(query) ||
-        vendor.email?.toLowerCase().includes(query) ||
-        vendor.phoneNumber?.includes(query))
-    );
-  });
+      const query = searchQuery.toLowerCase();
+      return (
+        matchesCategory &&
+        matchesStatus &&
+        (vendor.vendorName?.toLowerCase().includes(query) ||
+          vendor.category?.toLowerCase().includes(query) ||
+          vendor.address?.toLowerCase().includes(query) ||
+          vendor.email?.toLowerCase().includes(query))
+      );
+    });
+  }, [vendors, selectedCategory, selectedStatus, searchQuery]);
 
-  const isVerified = (v) => v.verified === true || v.verified === 1;
-  const nonVerifiedVendors = filteredVendors.filter((v) => !isVerified(v));
-  const verifiedVendors = filteredVendors.filter((v) => isVerified(v));
+  const filteredAdminVendors = useMemo(() => {
+    return adminVendors.filter((vendor) => {
+      const matchesCategory = selectedCategory ? vendor.category === selectedCategory : true;
+      if (!searchQuery) return matchesCategory;
+      const query = searchQuery.toLowerCase();
+      return (
+        matchesCategory &&
+        (vendor.vendorName?.toLowerCase().includes(query) ||
+          vendor.category?.toLowerCase().includes(query) ||
+          vendor.email?.toLowerCase().includes(query) ||
+          vendor.phoneNumber?.includes(query))
+      );
+    });
+  }, [adminVendors, selectedCategory, searchQuery]);
 
+  const nonVerifiedVendors = filteredVendors.filter((v) => !isVerifiedVendor(v));
+  const verifiedVendors = filteredVendors.filter((v) => isVerifiedVendor(v));
+
+  // ---------------------------
+  // ✅ EXISTING: Vendor verify/unverify
+  // ---------------------------
   const handleVerifyStatus = async (vendorId, currentVerifiedValue) => {
-    const isCurrentlyVerified =
-      currentVerifiedValue === 1 || currentVerifiedValue === true;
+    const isCurrentlyVerified = currentVerifiedValue === 1 || currentVerifiedValue === true;
     const newStatus = !isCurrentlyVerified;
 
-    const endpoint = newStatus
-      ? `/api/vendor/${vendorId}/verify`
-      : `/api/vendor/${vendorId}/unverify`;
+    const endpoint = newStatus ? `/api/vendor/${vendorId}/verify` : `/api/vendor/${vendorId}/unverify`;
 
     const previousVendors = [...vendors];
     const previousAdminVendors = [...adminVendors];
 
-    // Optimistic update
-    setVendors(
-      vendors.map((v) =>
-        v.id === vendorId ? { ...v, verified: newStatus } : v,
-      ),
-    );
+    setVendors(vendors.map((v) => (v.id === vendorId ? { ...v, verified: newStatus } : v)));
     setAdminVendors(
-      adminVendors.map((v) =>
-        v.id === vendorId ? { ...v, verified: newStatus } : v,
-      ),
+      adminVendors.map((v) => (v.id === vendorId ? { ...v, verified: newStatus } : v))
     );
 
     if (selectedVendor && selectedVendor.id === vendorId) {
@@ -192,23 +181,77 @@ const VendorDirectory = ({ searchQuery }) => {
     }
 
     try {
-      console.log(`🔄 Updating vendor ${vendorId} status to ${newStatus}...`);
       await api.put(endpoint);
-      console.log(`✅ Vendor ${vendorId} status updated to ${newStatus}`);
     } catch (err) {
-      console.error("❌ Failed to update vendor:", err);
-      // Rollback
+      console.error("Failed to update vendor:", err);
       setVendors(previousVendors);
       setAdminVendors(previousAdminVendors);
       if (selectedVendor && selectedVendor.id === vendorId) {
-        setSelectedVendor((prev) => ({
-          ...prev,
-          verified: currentVerifiedValue,
-        }));
+        setSelectedVendor((prev) => ({ ...prev, verified: currentVerifiedValue }));
       }
-      alert(
-        "Failed to update verification status. Please make sure you have admin permissions.",
-      );
+      alert("Failed to update verification status. Please make sure you have admin permissions.");
+    }
+  };
+
+  // ---------------------------
+  // ✅ NEW: Product verify/unverify
+  // router.put("/products/:id/verify", authenticate, authorizeRoles("admin"), verifyProduct);
+  // router.put("/products/:id/unverify", authenticate, authorizeRoles("admin"), unverifyProduct);
+  // ---------------------------
+  const handleVerifyProduct = async (productId, currentVerified) => {
+    if (!productId) return;
+
+    const isCurrentlyVerified = currentVerified === 1 || currentVerified === true;
+    const nextVerified = !isCurrentlyVerified;
+    const endpoint = nextVerified
+      ? `/api/products/products/${productId}/verify`
+      : `/api/products/products/${productId}/unverify`;
+
+    // optimistic update in selectedVendor ONLY (product list is rendered from selectedVendor)
+    const previousSelectedVendor = selectedVendor ? JSON.parse(JSON.stringify(selectedVendor)) : null;
+
+    setProductActionLoadingId(productId);
+
+    if (selectedVendor?.products?.length) {
+      setSelectedVendor((prev) => ({
+        ...prev,
+        products: prev.products.map((p) =>
+          p.id === productId ? { ...p, verified: nextVerified ? 1 : 0 } : p
+        ),
+      }));
+    }
+
+    // Also optimistic update in main lists (vendors + adminVendors), so when modal closes, list stays consistent
+    const previousVendors = JSON.parse(JSON.stringify(vendors));
+    const previousAdminVendors = JSON.parse(JSON.stringify(adminVendors));
+
+    const patchProductInVendorList = (list) =>
+      list.map((v) => {
+        if (!v?.products?.length) return v;
+        return {
+          ...v,
+          products: v.products.map((p) =>
+            p.id === productId ? { ...p, verified: nextVerified ? 1 : 0 } : p
+          ),
+        };
+      });
+
+    setVendors((prev) => patchProductInVendorList(prev));
+    setAdminVendors((prev) => patchProductInVendorList(prev));
+
+    try {
+      await api.put(endpoint);
+    } catch (err) {
+      console.error("Failed to update product status:", err);
+
+      // rollback
+      if (previousSelectedVendor) setSelectedVendor(previousSelectedVendor);
+      setVendors(previousVendors);
+      setAdminVendors(previousAdminVendors);
+
+      alert("Failed to update product verification status. Check admin permissions / API route.");
+    } finally {
+      setProductActionLoadingId(null);
     }
   };
 
@@ -225,25 +268,21 @@ const VendorDirectory = ({ searchQuery }) => {
 
   const handleDeleteVendors = async () => {
     if (
-      !window.confirm(
-        `Are you sure you want to delete ${selectedVendorIds.length} vendor(s)?`,
-      )
+      !window.confirm(`Are you sure you want to delete ${selectedVendorIds.length} vendor(s)?`)
     ) {
       return;
     }
 
     try {
       const deletePromises = selectedVendorIds.map((id) =>
-        api.delete(`/api/admin/vendor/deleteVendor/${id}`),
+        api.delete(`/api/admin/vendor/deleteVendor/${id}`)
       );
 
       await Promise.all(deletePromises);
 
-      if (activeTab === "admin") {
-        fetchAdminVendors();
-      } else {
-        fetchVendors();
-      }
+      if (activeTab === "admin") fetchAdminVendors();
+      else fetchVendors();
+
       setSelectedVendorIds([]);
     } catch (err) {
       console.error("Failed to delete vendors:", err);
@@ -251,8 +290,17 @@ const VendorDirectory = ({ searchQuery }) => {
     }
   };
 
+  // ✅ Filter products in modal
+  const filteredSelectedVendorProducts = useMemo(() => {
+    const list = selectedVendor?.products || [];
+    if (productStatusFilter === "all") return list;
+    if (productStatusFilter === "verified") return list.filter((p) => isVerifiedProduct(p));
+    return list.filter((p) => !isVerifiedProduct(p));
+  }, [selectedVendor, productStatusFilter]);
+
   return (
     <div className="space-y-6">
+      {/* Tabs */}
       <div className="flex border-b border-gray-200">
         <button
           onClick={() => setActiveTab("directory")}
@@ -278,19 +326,16 @@ const VendorDirectory = ({ searchQuery }) => {
 
       {activeTab === "directory" ? (
         <>
+          {/* Stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="bg-white rounded-xl border border-gray-100 p-6 hover:border-gray-200 transition-colors">
               <div className="flex items-start justify-between mb-3">
-                <p className="text-sm font-medium text-gray-500">
-                  Total Vendors
-                </p>
+                <p className="text-sm font-medium text-gray-500">Total Vendors</p>
                 <div className="w-10 h-10 rounded-lg bg-gray-50 flex items-center justify-center">
                   <Building2 className="w-5 h-5 text-gray-600" />
                 </div>
               </div>
-              <p className="text-3xl font-semibold text-gray-900">
-                {vendors.length}
-              </p>
+              <p className="text-3xl font-semibold text-gray-900">{vendors.length}</p>
             </div>
 
             <div className="bg-white rounded-xl border border-gray-100 p-6 hover:border-gray-200 transition-colors">
@@ -300,28 +345,23 @@ const VendorDirectory = ({ searchQuery }) => {
                   <ShieldCheck className="w-5 h-5 text-green-600" />
                 </div>
               </div>
-              <p className="text-3xl font-semibold text-gray-900">
-                {verifiedVendors.length}
-              </p>
+              <p className="text-3xl font-semibold text-gray-900">{verifiedVendors.length}</p>
             </div>
 
             <div className="bg-white rounded-xl border border-gray-100 p-6 hover:border-gray-200 transition-colors">
               <div className="flex items-start justify-between mb-3">
-                <p className="text-sm font-medium text-gray-500">
-                  Pending Review
-                </p>
+                <p className="text-sm font-medium text-gray-500">Pending Review</p>
                 <div className="w-10 h-10 rounded-lg bg-amber-50 flex items-center justify-center">
                   <AlertTriangle className="w-5 h-5 text-amber-600" />
                 </div>
               </div>
-              <p className="text-3xl font-semibold text-gray-900">
-                {nonVerifiedVendors.length}
-              </p>
+              <p className="text-3xl font-semibold text-gray-900">{nonVerifiedVendors.length}</p>
             </div>
           </div>
 
+          {/* Toolbar */}
           <div className="bg-white rounded-xl border border-gray-100 p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className={`flex items-center gap-3 w-full sm:w-auto`}>
+            <div className="flex items-center gap-3 w-full sm:w-auto">
               <div className="relative">
                 <select
                   value={selectedCategory}
@@ -338,10 +378,7 @@ const VendorDirectory = ({ searchQuery }) => {
                 <Filter className="w-4 h-4 text-gray-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
 
-              <DownloadExcel
-                data={filteredVendors}
-                fileName="vendor_directory"
-              />
+              <DownloadExcel data={filteredVendors} fileName="vendor_directory" />
 
               <button
                 onClick={fetchVendors}
@@ -411,6 +448,7 @@ const VendorDirectory = ({ searchQuery }) => {
             </div>
           </div>
 
+          {/* Table */}
           {loading ? (
             <div className="p-12 text-center">
               <div className="space-y-3 animate-pulse max-w-md mx-auto">
@@ -420,7 +458,6 @@ const VendorDirectory = ({ searchQuery }) => {
               </div>
             </div>
           ) : (
-            /* Table View */
             <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full">
@@ -467,9 +504,7 @@ const VendorDirectory = ({ searchQuery }) => {
                           <div className="w-16 h-16 bg-gray-50 rounded-lg flex items-center justify-center mx-auto mb-3">
                             <AlertCircle className="h-8 w-8 text-gray-400" />
                           </div>
-                          <p className="text-sm text-gray-500">
-                            No vendors found
-                          </p>
+                          <p className="text-sm text-gray-500">No vendors found</p>
                         </td>
                       </tr>
                     ) : (
@@ -477,16 +512,11 @@ const VendorDirectory = ({ searchQuery }) => {
                         <tr
                           key={vendor.id}
                           className={`hover:bg-gray-50/50 transition-colors cursor-pointer ${
-                            selectedVendorIds.includes(vendor.id)
-                              ? "bg-gray-50"
-                              : ""
+                            selectedVendorIds.includes(vendor.id) ? "bg-gray-50" : ""
                           }`}
                           onClick={() => setSelectedVendor(vendor)}
                         >
-                          <td
-                            className="px-5 py-3.5"
-                            onClick={(e) => e.stopPropagation()}
-                          >
+                          <td className="px-5 py-3.5" onClick={(e) => e.stopPropagation()}>
                             <input
                               type="checkbox"
                               className="rounded border-gray-300 text-[#891737] focus:ring-[#891737]"
@@ -501,14 +531,11 @@ const VendorDirectory = ({ searchQuery }) => {
                             <div className="flex items-center gap-3">
                               <div className="relative flex-shrink-0">
                                 <img
-                                  src={
-                                    vendor.logoUrl ||
-                                    "https://via.placeholder.com/40"
-                                  }
+                                  src={vendor.logoUrl || "https://via.placeholder.com/40"}
                                   alt={vendor.vendorName}
                                   className="w-10 h-10 rounded-full object-cover border border-gray-100"
                                 />
-                                {isVerified(vendor) && (
+                                {isVerifiedVendor(vendor) && (
                                   <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center border-2 border-white">
                                     <CheckCircle className="w-2.5 h-2.5 text-white" />
                                   </div>
@@ -518,9 +545,7 @@ const VendorDirectory = ({ searchQuery }) => {
                                 <p className="text-sm font-medium text-gray-900 truncate">
                                   {vendor.vendorName}
                                 </p>
-                                <p className="text-xs text-gray-500 truncate">
-                                  {vendor.email}
-                                </p>
+                                <p className="text-xs text-gray-500 truncate">{vendor.email}</p>
                               </div>
                             </div>
                           </td>
@@ -541,7 +566,7 @@ const VendorDirectory = ({ searchQuery }) => {
                             </p>
                           </td>
                           <td className="px-5 py-3.5 whitespace-nowrap">
-                            {isVerified(vendor) ? (
+                            {isVerifiedVendor(vendor) ? (
                               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-600 border border-green-100">
                                 <CheckCircle className="w-3.5 h-3.5" />
                                 Verified
@@ -554,9 +579,7 @@ const VendorDirectory = ({ searchQuery }) => {
                             )}
                           </td>
                           <td className="px-5 py-3.5 text-xs text-gray-600 whitespace-nowrap">
-                            {vendor.createdAt
-                              ? new Date(vendor.createdAt).toLocaleDateString()
-                              : "N/A"}
+                            {vendor.createdAt ? new Date(vendor.createdAt).toLocaleDateString() : "N/A"}
                           </td>
                         </tr>
                       ))
@@ -568,18 +591,15 @@ const VendorDirectory = ({ searchQuery }) => {
           )}
         </>
       ) : (
-        /* ADMIN VIEW */
+        /* ADMIN VIEW (unchanged UI, uses your existing) */
         <div className="space-y-4">
           <div className="bg-white rounded-xl border border-gray-100 p-4 flex items-center justify-between">
-            <h3 className="text-base font-semibold text-gray-900">
-              Vendor Master Registry
-            </h3>
+            <h3 className="text-base font-semibold text-gray-900">Vendor Master Registry</h3>
             <div className="flex items-center gap-2">
-              {/* Action Buttons */}
               {selectedVendorIds.length === 1 && (
                 <button
                   onClick={handleEditVendor}
-                  className="p-2 text-sm font-medium hover:bg-blue-50 text-blac bg-white border border-blue-100 rounded-lg transition-colors"
+                  className="p-2 text-sm font-medium hover:bg-blue-50 text-black bg-white border border-blue-100 rounded-lg transition-colors"
                   title="Edit Vendor"
                 >
                   <Pencil className="w-4 h-4" />
@@ -604,6 +624,7 @@ const VendorDirectory = ({ searchQuery }) => {
                 <PlusCircle className="w-4 h-4" />
                 Add Vendor
               </button>
+
               <div className="relative">
                 <select
                   value={selectedCategory}
@@ -619,10 +640,9 @@ const VendorDirectory = ({ searchQuery }) => {
                 </select>
                 <Filter className="w-4 h-4 text-gray-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
               </div>
-              <DownloadExcel
-                data={filteredAdminVendors}
-                fileName="vendor_master_registry"
-              />
+
+              <DownloadExcel data={filteredAdminVendors} fileName="vendor_master_registry" />
+
               <button
                 onClick={fetchAdminVendors}
                 className="p-2 text-sm font-medium hover:bg-gray-200 text-black bg-white border border-gray-100 rounded-lg transition-colors whitespace-nowrap"
@@ -653,8 +673,7 @@ const VendorDirectory = ({ searchQuery }) => {
                           className="rounded border-gray-300 text-[#891737] focus:ring-[#891737]"
                           checked={
                             filteredAdminVendors.length > 0 &&
-                            selectedVendorIds.length ===
-                              filteredAdminVendors.length
+                            selectedVendorIds.length === filteredAdminVendors.length
                           }
                           onChange={handleSelectAll}
                         />
@@ -689,9 +708,7 @@ const VendorDirectory = ({ searchQuery }) => {
                           <div className="w-16 h-16 bg-gray-50 rounded-lg flex items-center justify-center mx-auto mb-3">
                             <AlertCircle className="h-8 w-8 text-gray-400" />
                           </div>
-                          <p className="text-sm text-gray-500">
-                            No vendors found in registry
-                          </p>
+                          <p className="text-sm text-gray-500">No vendors found in registry</p>
                         </td>
                       </tr>
                     ) : (
@@ -699,16 +716,11 @@ const VendorDirectory = ({ searchQuery }) => {
                         <tr
                           key={vendor.id}
                           className={`hover:bg-gray-50/50 transition-colors cursor-pointer ${
-                            selectedVendorIds.includes(vendor.id)
-                              ? "bg-gray-50"
-                              : ""
+                            selectedVendorIds.includes(vendor.id) ? "bg-gray-50" : ""
                           }`}
                           onClick={() => setSelectedVendor(vendor)}
                         >
-                          <td
-                            className="px-5 py-3.5"
-                            onClick={(e) => e.stopPropagation()}
-                          >
+                          <td className="px-5 py-3.5" onClick={(e) => e.stopPropagation()}>
                             <input
                               type="checkbox"
                               className="rounded border-gray-300 text-[#891737] focus:ring-[#891737]"
@@ -743,9 +755,7 @@ const VendorDirectory = ({ searchQuery }) => {
                                 <p className="text-sm font-medium text-gray-900 truncate">
                                   {vendor.vendorName}
                                 </p>
-                                <p className="text-xs text-gray-500 truncate">
-                                  {vendor.email}
-                                </p>
+                                <p className="text-xs text-gray-500 truncate">{vendor.email}</p>
                               </div>
                             </div>
                           </td>
@@ -772,9 +782,7 @@ const VendorDirectory = ({ searchQuery }) => {
                             </span>
                           </td>
                           <td className="px-5 py-3.5 text-xs text-gray-600 whitespace-nowrap">
-                            {vendor.createdAt
-                              ? new Date(vendor.createdAt).toLocaleDateString()
-                              : "N/A"}
+                            {vendor.createdAt ? new Date(vendor.createdAt).toLocaleDateString() : "N/A"}
                           </td>
                         </tr>
                       ))
@@ -794,12 +802,8 @@ const VendorDirectory = ({ searchQuery }) => {
             {/* Header */}
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
               <div>
-                <h2 className="text-base font-semibold text-gray-900">
-                  Vendor Details
-                </h2>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  Complete vendor information
-                </p>
+                <h2 className="text-base font-semibold text-gray-900">Vendor Details</h2>
+                <p className="text-xs text-gray-500 mt-0.5">Complete vendor information</p>
               </div>
               <button
                 className="w-8 h-8 rounded-lg hover:bg-gray-100 flex items-center justify-center transition-colors"
@@ -811,7 +815,7 @@ const VendorDirectory = ({ searchQuery }) => {
 
             {/* Content */}
             <div className="p-6 overflow-y-auto">
-              {/* Profile Section */}
+              {/* Profile */}
               <div className="flex items-start gap-4 mb-6">
                 <img
                   src={
@@ -832,19 +836,16 @@ const VendorDirectory = ({ searchQuery }) => {
                       <h3 className="text-lg font-semibold text-gray-900">
                         {selectedVendor.vendorName}
                       </h3>
-                      <p className="text-sm text-gray-600 font-medium">
-                        {selectedVendor.category}
-                      </p>
+                      <p className="text-sm text-gray-600 font-medium">{selectedVendor.category}</p>
                     </div>
+
+                    {/* Vendor verify/unverify button (existing) */}
                     {activeTab === "directory" && (
                       <div>
-                        {isVerified(selectedVendor) ? (
+                        {isVerifiedVendor(selectedVendor) ? (
                           <button
                             onClick={() =>
-                              handleVerifyStatus(
-                                selectedVendor.id,
-                                selectedVendor.verified,
-                              )
+                              handleVerifyStatus(selectedVendor.id, selectedVendor.verified)
                             }
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-red-600 hover:bg-red-50 border border-red-100 transition-colors"
                           >
@@ -854,10 +855,7 @@ const VendorDirectory = ({ searchQuery }) => {
                         ) : (
                           <button
                             onClick={() =>
-                              handleVerifyStatus(
-                                selectedVendor.id,
-                                selectedVendor.verified,
-                              )
+                              handleVerifyStatus(selectedVendor.id, selectedVendor.verified)
                             }
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-green-600 hover:bg-green-50 border border-green-100 transition-colors"
                           >
@@ -871,11 +869,9 @@ const VendorDirectory = ({ searchQuery }) => {
                 </div>
               </div>
 
-              {/* Contact Information */}
+              {/* Contact */}
               <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                <h4 className="text-sm font-semibold text-gray-900 mb-3">
-                  Contact Information
-                </h4>
+                <h4 className="text-sm font-semibold text-gray-900 mb-3">Contact Information</h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-lg bg-white border border-gray-100 flex items-center justify-center flex-shrink-0">
@@ -883,9 +879,7 @@ const VendorDirectory = ({ searchQuery }) => {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-xs text-gray-500">Email</p>
-                      <p className="text-xs text-gray-900 truncate">
-                        {selectedVendor.email}
-                      </p>
+                      <p className="text-xs text-gray-900 truncate">{selectedVendor.email}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -894,9 +888,7 @@ const VendorDirectory = ({ searchQuery }) => {
                     </div>
                     <div>
                       <p className="text-xs text-gray-500">Phone</p>
-                      <p className="text-xs text-gray-900">
-                        {selectedVendor.phoneNumber}
-                      </p>
+                      <p className="text-xs text-gray-900">{selectedVendor.phoneNumber}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -905,9 +897,7 @@ const VendorDirectory = ({ searchQuery }) => {
                     </div>
                     <div className="min-w-0 flex-1">
                       <p className="text-xs text-gray-500">Location</p>
-                      <p className="text-xs text-gray-900 line-clamp-2">
-                        {selectedVendor.address}
-                      </p>
+                      <p className="text-xs text-gray-900 line-clamp-2">{selectedVendor.address}</p>
                     </div>
                   </div>
                   {selectedVendor.website && (
@@ -931,26 +921,42 @@ const VendorDirectory = ({ searchQuery }) => {
                 </div>
               </div>
 
-              {/* Products Section */}
-              {selectedVendor.products &&
-                selectedVendor.products.length > 0 && (
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <div className="flex items-center gap-2 mb-3">
+              {/* ✅ Products (with verify/unverify) */}
+              {selectedVendor.products && selectedVendor.products.length > 0 && (
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <div className="flex items-center justify-between gap-3 mb-3">
+                    <div className="flex items-center gap-2">
                       <div className="w-8 h-8 rounded-lg bg-white border border-gray-100 flex items-center justify-center">
                         <Package className="w-4 h-4 text-gray-600" />
                       </div>
-                      <h4 className="text-sm font-semibold text-gray-900">
-                        Products & Services
-                      </h4>
+                      <h4 className="text-sm font-semibold text-gray-900">Products & Services</h4>
                     </div>
-                    <div className="space-y-2">
-                      {selectedVendor.products.map((product, idx) => (
-                        <div
-                          key={idx}
-                          className="p-3 bg-white rounded-lg border border-gray-100"
-                        >
+
+                    {/* Product filter */}
+                    <div className="flex items-center gap-2">
+                      <Layers className="w-4 h-4 text-gray-500" />
+                      <select
+                        value={productStatusFilter}
+                        onChange={(e) => setProductStatusFilter(e.target.value)}
+                        className="px-3 py-2 text-xs bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#891737] focus:border-transparent outline-none"
+                      >
+                        <option value="all">All</option>
+                        <option value="verified">Displyed</option>
+                        <option value="pending">Pending</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    {filteredSelectedVendorProducts.length === 0 ? (
+                      <div className="p-6 text-center text-sm text-gray-500">
+                        No products in this filter.
+                      </div>
+                    ) : (
+                      filteredSelectedVendorProducts.map((product, idx) => (
+                        <div key={product.id || idx} className="p-3 bg-white rounded-lg border border-gray-100">
                           <div className="flex items-start gap-4">
-                            {/* Product Image */}
+                            {/* Image */}
                             <div className="w-16 h-16 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                               <img
                                 src={
@@ -968,34 +974,75 @@ const VendorDirectory = ({ searchQuery }) => {
                               />
                             </div>
 
-                            {/* Product Details */}
+                            {/* Details */}
                             <div className="flex-1 min-w-0">
-                              <h5 className="text-sm font-medium text-gray-900 mb-1">
-                                {product.name || product.productName}
-                              </h5>
-                              <span className="inline-block px-2 py-0.5 bg-gray-50 text-gray-600 rounded text-xs font-medium">
-                                {product.type || product.productType}
-                              </span>
-                              {(product.description ||
-                                product.productDescription) && (
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <h5 className="text-sm font-medium text-gray-900 mb-1 truncate">
+                                    {product.name || product.productName}
+                                  </h5>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="inline-block px-2 py-0.5 bg-gray-50 text-gray-600 rounded text-xs font-medium">
+                                      {product.type || product.productType}
+                                    </span>
+
+                                    {/* Product status pill */}
+                                    {isVerifiedProduct(product) ? (
+                                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-green-50 text-green-600 border border-green-100">
+                                        <CheckCircle className="w-3.5 h-3.5" />
+                                        Displayed
+                                      </span>
+                                    ) : (
+                                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-50 text-amber-600 border border-amber-100">
+                                        <Clock className="w-3.5 h-3.5" />
+                                        Pending
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* ✅ Product verify/unverify button (Admin only) */}
+                                {activeTab === "directory" && (
+                                  <button
+                                    type="button"
+                                    disabled={productActionLoadingId === product.id}
+                                    onClick={() => handleVerifyProduct(product.id, product.verified)}
+                                    className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors disabled:opacity-60 disabled:cursor-not-allowed ${
+                                      isVerifiedProduct(product)
+                                        ? "text-red-600 hover:bg-red-50 border-red-100"
+                                        : "text-green-600 hover:bg-green-50 border-green-100"
+                                    }`}
+                                    title={isVerifiedProduct(product) ? "Unverify Product" : "Verify Product"}
+                                  >
+                                    {isVerifiedProduct(product) ? (
+                                      <>
+                                        <X className="w-3.5 h-3.5" />
+                                        {productActionLoadingId === product.id ? "Working..." : "Remove Display"}
+                                      </>
+                                    ) : (
+                                      <>
+                                        <ShieldCheck className="w-3.5 h-3.5" />
+                                        {productActionLoadingId === product.id ? "Working..." : "Allow Display"}
+                                      </>
+                                    )}
+                                  </button>
+                                )}
+                              </div>
+
+                              {(product.description || product.productDescription) && (
                                 <p className="text-xs text-gray-600 mt-2 line-clamp-2">
-                                  {product.description ||
-                                    product.productDescription}
+                                  {product.description || product.productDescription}
                                 </p>
                               )}
 
-                              {/* Product Link Button */}
                               {(product.linkProduct || product.productLink) && (
                                 <a
-                                  href={
-                                    product.linkProduct || product.productLink
-                                  }
+                                  href={product.linkProduct || product.productLink}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="inline-flex items-center gap-1 mt-2 text-xs font-medium text-[#891737] hover:underline"
                                 >
-                                  View Product{" "}
-                                  <ExternalLink className="w-3 h-3" />
+                                  View Product <ExternalLink className="w-3 h-3" />
                                 </a>
                               )}
                             </div>
@@ -1006,17 +1053,16 @@ const VendorDirectory = ({ searchQuery }) => {
                                 <p className="text-lg font-semibold text-gray-900">
                                   ₹{product.price || product.productPrice}
                                 </p>
-                                <p className="text-xs text-gray-500">
-                                  per unit
-                                </p>
+                                <p className="text-xs text-gray-500">per unit</p>
                               </div>
                             )}
                           </div>
                         </div>
-                      ))}
-                    </div>
+                      ))
+                    )}
                   </div>
-                )}
+                </div>
+              )}
             </div>
 
             {/* Footer */}
@@ -1025,15 +1071,11 @@ const VendorDirectory = ({ searchQuery }) => {
                 <span className="text-xs text-gray-500">
                   Status:{" "}
                   {activeTab === "admin" ? (
-                    <span className="text-blue-600 font-medium whitespace-nowrap">
-                      Auto Verified
-                    </span>
-                  ) : isVerified(selectedVendor) ? (
+                    <span className="text-blue-600 font-medium whitespace-nowrap">Auto Verified</span>
+                  ) : isVerifiedVendor(selectedVendor) ? (
                     <span className="text-green-600 font-medium">Verified</span>
                   ) : (
-                    <span className="text-amber-600 font-medium">
-                      Pending Review
-                    </span>
+                    <span className="text-amber-600 font-medium">Pending Review</span>
                   )}
                 </span>
               </div>
@@ -1046,14 +1088,9 @@ const VendorDirectory = ({ searchQuery }) => {
                 </button>
                 {activeTab === "directory" && (
                   <>
-                    {isVerified(selectedVendor) ? (
+                    {isVerifiedVendor(selectedVendor) ? (
                       <button
-                        onClick={() =>
-                          handleVerifyStatus(
-                            selectedVendor.id,
-                            selectedVendor.verified,
-                          )
-                        }
+                        onClick={() => handleVerifyStatus(selectedVendor.id, selectedVendor.verified)}
                         className="px-6 py-2.5 text-sm font-semibold text-white bg-red-600 rounded-lg hover:bg-red-700 transition-all duration-200 flex items-center gap-2"
                       >
                         <X className="w-4 h-4" />
@@ -1061,12 +1098,7 @@ const VendorDirectory = ({ searchQuery }) => {
                       </button>
                     ) : (
                       <button
-                        onClick={() =>
-                          handleVerifyStatus(
-                            selectedVendor.id,
-                            selectedVendor.verified,
-                          )
-                        }
+                        onClick={() => handleVerifyStatus(selectedVendor.id, selectedVendor.verified)}
                         className="px-6 py-2.5 text-sm font-semibold text-white bg-green-600 rounded-lg hover:bg-green-700 transition-all duration-200 flex items-center gap-2"
                       >
                         <ShieldCheck className="w-4 h-4" />
@@ -1091,7 +1123,6 @@ const VendorDirectory = ({ searchQuery }) => {
         />
       )}
 
-      {/* Edit Vendor Modal */}
       {showEditModal && (
         <AddVendorForm
           isEditMode={true}
@@ -1101,7 +1132,7 @@ const VendorDirectory = ({ searchQuery }) => {
             setVendorToEdit(null);
             if (activeTab === "admin") fetchAdminVendors();
             else fetchVendors();
-            setSelectedVendorIds([]); // Clear selection
+            setSelectedVendorIds([]);
           }}
         />
       )}

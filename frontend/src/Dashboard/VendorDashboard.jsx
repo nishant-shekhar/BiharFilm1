@@ -1,36 +1,30 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Building2,
   Package,
-  Star,
-  Eye,
-  MessageCircle,
-  Calendar,
+  AlertCircle,
+  CheckCircle,
+  User,
+  Edit3,
+  Plus,
+  X,
+  Save,
+  Loader,
   MapPin,
   Phone,
   Mail,
   Globe,
-  Edit3,
-  Plus,
-  BarChart3,
-  X,
-  Save,
-  Loader,
-  AlertCircle,
-  CheckCircle,
-  User,
-  Camera,
-  Image as ImageIcon,
-  DollarSign,
-  RefreshCw, // ✅ Added Refresh icon
-  ChevronLeft, // ✅ Added ChevronLeft
-  ChevronRight, // ✅ Added ChevronRight
+  RefreshCw,
+  ChevronLeft,
+  ChevronRight,
   ExternalLink,
+  Image as ImageIcon,
 } from "lucide-react";
 import AlertBox from "../Components/AlertBox";
 import CategoryDropdown from "./CategoryDropdown";
 import api from "../Components/axios";
 import { validateFile } from "../utils/fileValidation";
+import vendorCategories from "../utils/vendorCategories.json";
 
 const VENDOR_CATEGORIES = [
   "Shooting Studios",
@@ -51,38 +45,43 @@ const VENDOR_CATEGORIES = [
   "Generator Services",
   "Security Services",
   "Houses for shooting providers",
-  // Added from OLD list (missing)
   "Choreography & Dancers",
   "Still Photography & BTS",
   "Lighting Equipment Suppliers",
   "Others",
 ];
 
-const ITEMS_PER_PAGE = 5; // ✅ Pagination Limit
+const ITEMS_PER_PAGE = 5;
 
 // ✅ Extract Categories Helper
 const extractCategories = (data) => {
   if (!data) return [];
 
-  // Check for 'categories' array of objects (new structure)
   if (Array.isArray(data.categories)) {
     return data.categories
       .map((c) => (typeof c === "object" ? c.category?.name : c))
       .filter(Boolean);
   }
 
-  // Check for 'category' array of strings (old structure)
-  if (Array.isArray(data.category)) {
-    return data.category;
-  }
+  if (Array.isArray(data.category)) return data.category;
 
-  // Check for 'category' comma-separated string (old structure)
   if (typeof data.category === "string") {
-    return data.category.split(", ").filter((c) => c);
+    return data.category
+      .split(",")
+      .map((x) => x.trim())
+      .filter(Boolean);
   }
 
   return [];
 };
+// ✅ Add these helpers near the top (after extractCategories)
+
+const isVisibleOnHomepage = (product) =>
+  product?.verified === true || product?.verified === 1;
+
+// Optional: if backend later adds a dedicated flag for homepage display
+// const isVisibleOnHomepage = (product) => product?.isHomepageVisible === true;
+
 
 const VendorDashboard = () => {
   const [vendorId, setVendorId] = useState(null);
@@ -115,19 +114,19 @@ const VendorDashboard = () => {
   const [showAddProductModal, setShowAddProductModal] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  // ✅ Edit Product State
   const [editingProduct, setEditingProduct] = useState(null);
 
-  // ✅ Pagination State
+  // ✅ Pagination
   const [currentPage, setCurrentPage] = useState(1);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState(null);
+
   const [productImageFile, setProductImageFile] = useState(null);
   const [productImagePreview, setProductImagePreview] = useState(null);
 
+  // ✅ IMPORTANT: subType is REQUIRED now
   const [productFormData, setProductFormData] = useState({
     name: "",
     type: "",
@@ -139,6 +138,10 @@ const VendorDashboard = () => {
     link: "",
   });
 
+  // ✅ Type/SubType restricted + “Other” text input
+  const [showOtherType, setShowOtherType] = useState(false);
+  const [showOtherSubType, setShowOtherSubType] = useState(false);
+
   const [profileFormData, setProfileFormData] = useState({
     vendorName: "",
     category: [],
@@ -148,7 +151,7 @@ const VendorDashboard = () => {
     website: "",
   });
 
-  // ✅ Alert state
+  // ✅ Alert
   const [alertConfig, setAlertConfig] = useState({
     isOpen: false,
     type: "info",
@@ -160,7 +163,7 @@ const VendorDashboard = () => {
     autoClose: false,
   });
 
-  // ✅ Validation Error State
+  // ✅ Validation errors
   const [errors, setErrors] = useState({
     vendorName: "",
     phoneNumber: "",
@@ -171,9 +174,8 @@ const VendorDashboard = () => {
 
   const API_BASE_URL = "/api/vendor";
   const API_BASE_URL_PRODUCTS = "/api/vendorproduct";
-  const token = localStorage.getItem("authToken");
 
-  // ✅ Alert helper function
+  // ✅ Alert helpers
   const showAlert = (config) => {
     setAlertConfig({
       isOpen: true,
@@ -190,54 +192,51 @@ const VendorDashboard = () => {
   };
 
   const closeAlert = () => {
-    setAlertConfig({ ...alertConfig, isOpen: false });
+    setAlertConfig((prev) => ({ ...prev, isOpen: false }));
   };
 
   // ✅ Validation Function
   const validateField = (name, value) => {
-    let error = "";
-
+    let err = "";
     switch (name) {
       case "vendorName":
-        if (!/^[a-zA-Z\s]*$/.test(value)) {
-          error = "Only text allowed (no numbers or special characters).";
+        if (value && !/^[a-zA-Z\s]*$/.test(value)) {
+          err = "Only text allowed (no numbers or special characters).";
         }
         break;
       case "phoneNumber":
-        if (!/^\d*$/.test(value)) {
-          error = "Only numbers allowed.";
+        if (value && !/^\d*$/.test(value)) {
+          err = "Only numbers allowed.";
         } else if (
           value.length > 0 &&
           value.length !== 10 &&
           value.length !== 12
         ) {
-          error = "Phone number must be either 10 or 12 digits.";
+          err = "Phone number must be either 10 or 12 digits.";
         }
         break;
-      case "email":
+      case "email": {
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (value && !emailRegex.test(value)) {
-          error = "Please enter a valid email address.";
-        }
+        if (value && !emailRegex.test(value)) err = "Please enter a valid email.";
         break;
+      }
       case "website":
         if (value && !value.startsWith("https://")) {
-          error = "Website URL must start with https://";
+          err = "Website URL must start with https://";
         }
         break;
       default:
         break;
     }
-    return error;
+    return err;
   };
 
+  // ✅ Fetch profile
   useEffect(() => {
     const fetchVendorProfile = async () => {
       try {
         setLoading(true);
         setError(null);
-
-        console.log("📡 Fetching vendor profile by userId...");
 
         const response = await api.get(`${API_BASE_URL}/myVendorProfile`, {
           validateStatus: () => true,
@@ -245,12 +244,8 @@ const VendorDashboard = () => {
 
         if (response.status >= 200 && response.status < 300) {
           const result = response.data;
-          console.log("✅ Vendor profile fetched:", result.data);
-
-          // Use helper to extract categories consistently
           const categoryArray = extractCategories(result.data);
 
-          // Set vendorData with converted category
           setVendorData({
             ...result.data,
             category: categoryArray,
@@ -271,18 +266,12 @@ const VendorDashboard = () => {
             website: result.data.website || "",
           });
 
-          if (result.data.logoUrl) {
-            setLogoPreview(result.data.logoUrl);
-          }
+          if (result.data.logoUrl) setLogoPreview(result.data.logoUrl);
         } else if (response.status === 404 || response.status === 403) {
-          console.log(
-            "❌ No vendor profile found (or not authorized as vendor) - showing profile creation",
-          );
           setVendorId(null);
           setError(null);
         } else if (response.status === 401) {
           setError("Session expired. Please login again.");
-          // No need to remove local storage token as we are using cookies
           showAlert({
             type: "error",
             title: "Session Expired",
@@ -298,15 +287,12 @@ const VendorDashboard = () => {
       } catch (err) {
         console.error("Error fetching vendor profile:", err);
         setError("Failed to load vendor profile. Please try again.");
-
         showAlert({
           type: "error",
           title: "Failed to Load Profile",
           message: "Unable to load your vendor profile. Please try again.",
           confirmText: "Retry",
-          onConfirm: () => {
-            window.location.reload();
-          },
+          onConfirm: () => window.location.reload(),
         });
       } finally {
         setLoading(false);
@@ -314,22 +300,20 @@ const VendorDashboard = () => {
     };
 
     fetchVendorProfile();
-  }, []); // Removed token dependency
+  }, []);
 
+  // ✅ Create profile
   const handleCreateProfile = async (e) => {
     e.preventDefault();
     setProfileUpdateLoading(true);
 
     try {
-      // Check for validation errors
-      if (Object.values(errors).some((err) => err)) {
+      if (Object.values(errors).some((x) => x)) {
         showAlert({
           type: "error",
           title: "Validation Error",
           message: "Please fix the errors in the form before submitting.",
-          confirmText: "OK",
         });
-        setProfileUpdateLoading(false);
         return;
       }
 
@@ -344,9 +328,7 @@ const VendorDashboard = () => {
           type: "warning",
           title: "Missing Fields",
           message: "Please fill in all required fields",
-          confirmText: "OK",
         });
-        setProfileUpdateLoading(false);
         return;
       }
 
@@ -355,9 +337,7 @@ const VendorDashboard = () => {
           type: "warning",
           title: "Logo Required",
           message: "Please upload a logo for your vendor profile",
-          confirmText: "OK",
         });
-        setProfileUpdateLoading(false);
         return;
       }
 
@@ -370,24 +350,17 @@ const VendorDashboard = () => {
       formData.append("website", profileFormData.website || "");
       formData.append("logo", logoFile);
 
-      console.log("📤 Creating new vendor...");
-
       const response = await api.post(`${API_BASE_URL}/addvendors`, formData, {
         validateStatus: () => true,
       });
 
       if (response.status >= 200 && response.status < 300) {
         const result = response.data;
-        console.log("✅ Vendor created:", result.data);
-
-        setVendorId(result.data.id);
-
         const categoryArray = extractCategories(result.data);
 
-        setVendorData({
-          ...result.data,
-          category: categoryArray,
-        });
+        setVendorId(result.data.id);
+        setVendorData({ ...result.data, category: categoryArray });
+
         setProfileFormData({
           vendorName: result.data.vendorName || "",
           category: categoryArray,
@@ -396,6 +369,7 @@ const VendorDashboard = () => {
           address: result.data.address || "",
           website: result.data.website || "",
         });
+
         setShowEditProfileModal(false);
         setLogoPreview(null);
         setLogoFile(null);
@@ -403,15 +377,12 @@ const VendorDashboard = () => {
         showAlert({
           type: "success",
           title: "Profile Created!",
-          message:
-            "Your vendor profile has been created successfully. Now add your products!",
-          confirmText: "Great!",
+          message: "Your vendor profile has been created successfully. Now add your products!",
           autoClose: true,
-          duration: 3000,
+          duration: 2500,
         });
       } else {
-        const errorData = response.data;
-        throw new Error(errorData.message || "Failed to create profile");
+        throw new Error(response.data?.message || "Failed to create profile");
       }
     } catch (err) {
       console.error("Error creating profile:", err);
@@ -419,27 +390,24 @@ const VendorDashboard = () => {
         type: "error",
         title: "Creation Failed",
         message: `Failed to create profile: ${err.message}`,
-        confirmText: "OK",
       });
     } finally {
       setProfileUpdateLoading(false);
     }
   };
 
+  // ✅ Update profile
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
     setProfileUpdateLoading(true);
 
     try {
-      // Check for validation errors
-      if (Object.values(errors).some((err) => err)) {
+      if (Object.values(errors).some((x) => x)) {
         showAlert({
           type: "error",
           title: "Validation Error",
           message: "Please fix the errors in the form before submitting.",
-          confirmText: "OK",
         });
-        setProfileUpdateLoading(false);
         return;
       }
 
@@ -454,9 +422,7 @@ const VendorDashboard = () => {
           type: "warning",
           title: "Missing Fields",
           message: "Please fill in all required fields",
-          confirmText: "OK",
         });
-        setProfileUpdateLoading(false);
         return;
       }
 
@@ -467,32 +433,17 @@ const VendorDashboard = () => {
       formData.append("email", profileFormData.email);
       formData.append("address", profileFormData.address);
       formData.append("website", profileFormData.website || "");
+      if (logoFile) formData.append("logo", logoFile);
 
-      if (logoFile) {
-        formData.append("logo", logoFile);
-      }
-
-      console.log("📤 Updating vendor profile...");
-
-      const response = await api.put(
-        `${API_BASE_URL}/vendors/${vendorId}`,
-        formData,
-        {
-          validateStatus: () => true,
-        },
-      );
+      const response = await api.put(`${API_BASE_URL}/vendors/${vendorId}`, formData, {
+        validateStatus: () => true,
+      });
 
       if (response.status >= 200 && response.status < 300) {
         const result = response.data;
-        console.log("✅ Vendor updated:", result.data);
-
         const categoryArray = extractCategories(result.data);
 
-        // Update vendorData with converted category array
-        setVendorData({
-          ...result.data,
-          category: categoryArray,
-        });
+        setVendorData({ ...result.data, category: categoryArray });
         setProfileFormData({
           vendorName: result.data.vendorName || "",
           category: categoryArray,
@@ -501,6 +452,7 @@ const VendorDashboard = () => {
           address: result.data.address || "",
           website: result.data.website || "",
         });
+
         setShowEditProfileModal(false);
         setLogoPreview(null);
         setLogoFile(null);
@@ -509,20 +461,17 @@ const VendorDashboard = () => {
           type: "success",
           title: "Profile Updated!",
           message: "Your profile has been updated successfully.",
-          confirmText: "Great!",
           autoClose: true,
-          duration: 3000,
+          duration: 2000,
         });
       } else if (response.status === 403) {
         showAlert({
           type: "error",
           title: "Unauthorized",
           message: "You cannot update this vendor profile.",
-          confirmText: "OK",
         });
       } else {
-        const errorData = response.data;
-        throw new Error(errorData.message || "Failed to update profile");
+        throw new Error(response.data?.message || "Failed to update profile");
       }
     } catch (err) {
       console.error("Error updating profile:", err);
@@ -530,96 +479,104 @@ const VendorDashboard = () => {
         type: "error",
         title: "Update Failed",
         message: `Failed to update profile: ${err.message}`,
-        confirmText: "OK",
       });
     } finally {
       setProfileUpdateLoading(false);
     }
   };
 
+  // ✅ Product input change
+  const handleProductInputChange = (e) => {
+    const { name, value } = e.target;
+    setProductFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  // ✅ STRICT Type change logic
+  const handleTypeChange = (e) => {
+    const value = e.target.value;
+
+    if (value === "Other") {
+      setShowOtherType(true);
+      setShowOtherSubType(true); // force subtype text box
+      setProductFormData((prev) => ({ ...prev, type: "", subType: "" }));
+      return;
+    }
+
+    setShowOtherType(false);
+    setShowOtherSubType(false);
+    setProductFormData((prev) => ({ ...prev, type: value, subType: "" }));
+  };
+
+  // ✅ STRICT SubType change logic
+  const handleSubTypeChange = (e) => {
+    const value = e.target.value;
+
+    if (value === "Other") {
+      setShowOtherSubType(true);
+      setProductFormData((prev) => ({ ...prev, subType: "" }));
+      return;
+    }
+
+    setShowOtherSubType(false);
+    setProductFormData((prev) => ({ ...prev, subType: value }));
+  };
+
+  const validateProductForm = () => {
+    if (!productFormData.name?.trim()) return "Product name is required.";
+    if (!productFormData.type?.trim()) return "Type is required.";
+    if (!productFormData.subType?.trim()) return "Sub-Type is required.";
+    if (!productFormData.description?.trim()) return "Description is required.";
+    return null;
+  };
+
+  // ✅ Add product (subType required)
   const handleAddProduct = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
-      if (
-        !productFormData.name ||
-        !productFormData.type ||
-        !productFormData.description
-      ) {
-        showAlert({
-          type: "warning",
-          title: "Missing Fields",
-          message:
-            "Please fill in all required fields (Name, Type, Description)",
-          confirmText: "OK",
-        });
-        setIsSubmitting(false);
-        return;
-      }
-
       if (!vendorId) {
         showAlert({
           type: "warning",
           title: "Profile Required",
           message: "Please create your vendor profile first",
-          confirmText: "OK",
         });
-        setIsSubmitting(false);
+        return;
+      }
+
+      const vErr = validateProductForm();
+      if (vErr) {
+        showAlert({ type: "warning", title: "Missing Fields", message: vErr });
         return;
       }
 
       const formData = new FormData();
-      formData.append("name", productFormData.name);
-      formData.append("type", productFormData.type);
-      formData.append("subType", productFormData.subType);
-      formData.append("description", productFormData.description);
+      formData.append("name", productFormData.name.trim());
+      formData.append("type", productFormData.type.trim());
+      formData.append("subType", productFormData.subType.trim());
+      formData.append("description", productFormData.description.trim());
+
       if (productFormData.link && /^https:\/\/.+/.test(productFormData.link)) {
         formData.append("productLink", productFormData.link);
       }
+
       const priceString =
         productFormData.priceFrom && productFormData.priceTo
           ? `${productFormData.priceFrom}-${productFormData.priceTo}`
           : productFormData.price;
 
-      formData.append("price", priceString);
+      formData.append("price", priceString || "");
 
-      if (productImageFile) {
-        formData.append("image", productImageFile);
-      }
-
-      console.log("📤 Adding product to vendor:", vendorId);
+      if (productImageFile) formData.append("image", productImageFile);
 
       const response = await api.post(
         `${API_BASE_URL_PRODUCTS}/vendors/${vendorId}/products`,
         formData,
-        {
-          validateStatus: () => true,
-        },
+        { validateStatus: () => true }
       );
 
       if (response.status >= 200 && response.status < 300) {
-        const result = response.data;
-        console.log("✅ Product added:", result.data);
-
-        const refreshResponse = await api.get(
-          `${API_BASE_URL}/myVendorProfile`,
-          {
-            validateStatus: () => true,
-          },
-        );
-
-        if (refreshResponse.status >= 200 && refreshResponse.status < 300) {
-          const refreshResult = refreshResponse.data;
-          setVendorData({
-            ...refreshResult.data,
-            category: extractCategories(refreshResult.data),
-          });
-          setStats((prev) => ({
-            ...prev,
-            totalProducts: refreshResult.data.products?.length || 0,
-          }));
-        }
+        await handleRefreshProducts();
 
         setProductFormData({
           name: "",
@@ -633,29 +590,25 @@ const VendorDashboard = () => {
         });
         setProductImagePreview(null);
         setProductImageFile(null);
+        setShowOtherType(false);
+        setShowOtherSubType(false);
         setShowAddProductModal(false);
 
         showAlert({
           type: "success",
           title: "Product Added!",
           message: "Your product has been added successfully.",
-          confirmText: "Great!",
           autoClose: true,
-          duration: 3000,
+          duration: 2000,
         });
       } else if (response.status === 403) {
         showAlert({
           type: "error",
           title: "Unauthorized",
           message: "You cannot add products to this vendor.",
-          confirmText: "OK",
         });
       } else {
-        const errorData = response.data;
-        console.error("Error response:", errorData);
-        throw new Error(
-          errorData?.message || `Failed to add product: ${response.status}`,
-        );
+        throw new Error(response.data?.message || `Failed to add product: ${response.status}`);
       }
     } catch (err) {
       console.error("Error adding product:", err);
@@ -663,161 +616,13 @@ const VendorDashboard = () => {
         type: "error",
         title: "Failed to Add Product",
         message: `Failed to add product: ${err.message}`,
-        confirmText: "OK",
       });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleDeleteProduct = async (productId) => {
-    showAlert({
-      type: "warning",
-      title: "Delete Product?",
-      message:
-        "Are you sure you want to delete this product? This action cannot be undone.",
-      confirmText: "Delete",
-      cancelText: "Cancel",
-      showCancel: true,
-      onConfirm: async () => {
-        try {
-          const response = await api.delete(
-            `${API_BASE_URL_PRODUCTS}/products/${productId}`,
-          );
-
-          if (response.status >= 200 && response.status < 300) {
-            console.log("✅ Product deleted");
-
-            const refreshResponse = await api.get(
-              `${API_BASE_URL}/myVendorProfile`,
-              {
-                validateStatus: () => true,
-              },
-            );
-
-            if (refreshResponse.status >= 200 && refreshResponse.status < 300) {
-              const refreshResult = refreshResponse.data;
-              setVendorData({
-                ...refreshResult.data,
-                category: extractCategories(refreshResult.data),
-              });
-              setStats((prev) => ({
-                ...prev,
-                totalProducts: refreshResult.data.products?.length || 0,
-              }));
-            }
-
-            showAlert({
-              type: "success",
-              title: "Product Deleted!",
-              message: "Product has been deleted successfully.",
-              confirmText: "OK",
-              autoClose: true,
-              duration: 3000,
-            });
-          } else if (response.status === 403) {
-            showAlert({
-              type: "error",
-              title: "Unauthorized",
-              message: "You cannot delete this product.",
-              confirmText: "OK",
-            });
-          } else {
-            throw new Error("Failed to delete product");
-          }
-        } catch (err) {
-          console.error("Error deleting product:", err);
-          showAlert({
-            type: "error",
-            title: "Delete Failed",
-            message: `Failed to delete product: ${err.message}`,
-            confirmText: "OK",
-          });
-        }
-      },
-    });
-  };
-
-  const handleLogoUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const validation = validateFile(file);
-      if (!validation.isValid) {
-        showAlert({
-          type: "warning",
-          title: "Validation Error",
-          message: validation.error,
-          confirmText: "OK",
-        });
-        e.target.value = null;
-        return;
-      }
-
-      setLogoFile(file);
-
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setLogoPreview(event.target.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleProductImageUpload = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      // enforce 1MB max for product images
-      const validation = validateFile(file, 1);
-      if (!validation.isValid) {
-        showAlert({
-          type: "warning",
-          title: "Validation Error",
-          message: validation.error,
-          confirmText: "OK",
-        });
-        e.target.value = null;
-        return;
-      }
-
-      setProductImageFile(file);
-
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setProductImagePreview(event.target.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleProductInputChange = (e) => {
-    const { name, value } = e.target;
-    setProductFormData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  // ✅ Pagination Logic
-  const validProducts = Array.isArray(vendorData.products)
-    ? vendorData.products
-    : [];
-  const totalPages = Math.ceil(validProducts.length / ITEMS_PER_PAGE);
-
-  const currentProducts = validProducts.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE,
-  );
-
-  const handleNextPage = () => {
-    if (currentPage < totalPages) {
-      setCurrentPage((prev) => prev + 1);
-    }
-  };
-
-  const handlePrevPage = () => {
-    if (currentPage > 1) {
-      setCurrentPage((prev) => prev - 1);
-    }
-  };
-
-  // ✅ Refresh Products
+  // ✅ Refresh products
   const handleRefreshProducts = async () => {
     try {
       if (!vendorId) return;
@@ -837,82 +642,99 @@ const VendorDashboard = () => {
           ...prev,
           totalProducts: result.data.products?.length || 0,
         }));
-        showAlert({
-          type: "success",
-          title: "Refreshed",
-          message: "Product list updated",
-          autoClose: true,
-          duration: 1500,
-        });
       }
-    } catch (error) {
-      console.error("Refresh failed:", error);
+    } catch (err) {
+      console.error("Refresh failed:", err);
     } finally {
       setIsRefreshing(false);
     }
   };
 
-  // ✅ Edit Product Handler - Opens Modal
+  // ✅ Edit click: detect custom type/subtype (Other)
   const handleEditClick = (product) => {
     setEditingProduct(product);
+
+    const typeVal = (product.type || "").trim();
+    const subVal = (product.subType || "").trim();
+
+    const typeObj = vendorCategories.find((c) => c.name === typeVal);
+    const isCustomType = !typeObj;
+
+    setShowOtherType(isCustomType);
+
+    if (isCustomType) {
+      setShowOtherSubType(true);
+    } else {
+      const subtypeExists = typeObj.subcategories?.some((s) => s.name === subVal);
+      setShowOtherSubType(!subtypeExists);
+    }
+
     setProductFormData({
-      name: product.name,
-      type: product.type,
-      subType: product.subType || "",
-      description: product.description,
-      price: product.price || "",
-      priceFrom: (product.price || "").toString().split("-")[0] || "",
-      priceTo: (product.price || "").toString().split("-")[1] || "",
-      link: product.productLink || product.link || "",
+      name: product.name || "",
+      type: typeVal,
+      subType: subVal,
+      description: product.description || "",
+      price: product.price && !String(product.price).includes("-") ? product.price : "",
+      priceFrom:
+        product.price && String(product.price).includes("-")
+          ? String(product.price).split("-")[0]
+          : "",
+      priceTo:
+        product.price && String(product.price).includes("-")
+          ? String(product.price).split("-")[1]
+          : "",
+      link: product.productLink || "",
     });
-    setProductImagePreview(product.imageUrl);
+
+    setProductImagePreview(product.imageUrl || null);
+    setProductImageFile(null);
     setShowAddProductModal(true);
   };
 
-  // ✅ Update Product API Call
+  // ✅ Update product (subType required)
   const handleUpdateProduct = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
-      const formData = new FormData();
-      formData.append("name", productFormData.name);
-      formData.append("type", productFormData.type);
-      if (productFormData.subType) {
-        formData.append("subType", productFormData.subType);
+      if (!editingProduct?.id) return;
+
+      const vErr = validateProductForm();
+      if (vErr) {
+        showAlert({ type: "warning", title: "Missing Fields", message: vErr });
+        return;
       }
-      formData.append("description", productFormData.description);
+
+      const formData = new FormData();
+      formData.append("name", productFormData.name.trim());
+      formData.append("type", productFormData.type.trim());
+      formData.append("subType", productFormData.subType.trim());
+      formData.append("description", productFormData.description.trim());
+
       if (productFormData.link && /^https:\/\/.+/.test(productFormData.link)) {
         formData.append("productLink", productFormData.link);
       }
+
       const priceString =
         productFormData.priceFrom && productFormData.priceTo
           ? `${productFormData.priceFrom}-${productFormData.priceTo}`
           : productFormData.price;
 
-      formData.append("price", priceString);
+      formData.append("price", priceString || "");
 
-      if (productImageFile) {
-        formData.append("image", productImageFile);
-      }
-
-      console.log("📤 Updating product:", editingProduct.id);
+      if (productImageFile) formData.append("image", productImageFile);
 
       const response = await api.put(
         `${API_BASE_URL_PRODUCTS}/updateproduct/${editingProduct.id}`,
         formData,
-        { validateStatus: () => true },
+        { validateStatus: () => true }
       );
 
       if (response.status >= 200 && response.status < 300) {
-        console.log("✅ Product updated");
-
-        // Refresh list
         await handleRefreshProducts();
 
-        // Close modal & reset
-        setShowAddProductModal(false);
         setEditingProduct(null);
+        setShowAddProductModal(false);
         setProductFormData({
           name: "",
           type: "",
@@ -925,6 +747,8 @@ const VendorDashboard = () => {
         });
         setProductImagePreview(null);
         setProductImageFile(null);
+        setShowOtherType(false);
+        setShowOtherSubType(false);
 
         showAlert({
           type: "success",
@@ -942,42 +766,115 @@ const VendorDashboard = () => {
         type: "error",
         title: "Update Failed",
         message: err.message,
-        confirmText: "OK",
       });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleProfileInputChange = (e) => {
-    const { name, value } = e.target;
+  // ✅ Delete product
+  const handleDeleteProduct = async (productId) => {
+    showAlert({
+      type: "warning",
+      title: "Delete Product?",
+      message: "Are you sure you want to delete this product? This action cannot be undone.",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      showCancel: true,
+      onConfirm: async () => {
+        try {
+          const response = await api.delete(`${API_BASE_URL_PRODUCTS}/products/${productId}`, {
+            validateStatus: () => true,
+          });
 
-    // Limit phone number to 12 digits to prevent excessive input
-    if (name === "phoneNumber" && value.length > 12) {
+          if (response.status >= 200 && response.status < 300) {
+            await handleRefreshProducts();
+            showAlert({
+              type: "success",
+              title: "Product Deleted!",
+              message: "Product has been deleted successfully.",
+              autoClose: true,
+              duration: 1800,
+            });
+          } else {
+            throw new Error(response.data?.message || "Failed to delete product");
+          }
+        } catch (err) {
+          console.error("Delete failed:", err);
+          showAlert({
+            type: "error",
+            title: "Delete Failed",
+            message: err.message,
+          });
+        }
+      },
+    });
+  };
+
+  // ✅ Logo upload
+  const handleLogoUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validation = validateFile(file);
+    if (!validation.isValid) {
+      showAlert({ type: "warning", title: "Validation Error", message: validation.error });
+      e.target.value = null;
       return;
     }
 
-    const error = validateField(name, value);
-    setErrors((prev) => ({
-      ...prev,
-      [name]: error,
-    }));
+    setLogoFile(file);
+    const reader = new FileReader();
+    reader.onload = (event) => setLogoPreview(event.target.result);
+    reader.readAsDataURL(file);
+  };
 
+  // ✅ Product image upload
+  const handleProductImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validation = validateFile(file, 1); // 1MB
+    if (!validation.isValid) {
+      showAlert({ type: "warning", title: "Validation Error", message: validation.error });
+      e.target.value = null;
+      return;
+    }
+
+    setProductImageFile(file);
+    const reader = new FileReader();
+    reader.onload = (event) => setProductImagePreview(event.target.result);
+    reader.readAsDataURL(file);
+  };
+
+  // ✅ Profile input change
+  const handleProfileInputChange = (e) => {
+    const { name, value } = e.target;
+
+    if (name === "phoneNumber" && value.length > 12) return;
+
+    const err = validateField(name, value);
+    setErrors((prev) => ({ ...prev, [name]: err }));
     setProfileFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const getStatColorClasses = (color) => {
-    const colorMap = {
-      blue: { bg: "bg-blue-100", text: "text-blue-600" },
-      green: { bg: "bg-green-100", text: "text-green-600" },
-      purple: { bg: "bg-purple-100", text: "text-purple-600" },
-      yellow: { bg: "bg-yellow-100", text: "text-yellow-600" },
-      red: { bg: "bg-red-100", text: "text-red-600" },
-      orange: { bg: "bg-orange-100", text: "text-orange-600" },
-    };
-    return colorMap[color] || { bg: "bg-gray-100", text: "text-gray-600" };
-  };
+  // ✅ Pagination data
+  const validProducts = useMemo(
+    () => (Array.isArray(vendorData.products) ? vendorData.products : []),
+    [vendorData.products]
+  );
 
+  const totalPages = Math.ceil(validProducts.length / ITEMS_PER_PAGE) || 1;
+
+  const currentProducts = validProducts.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  const handleNextPage = () => currentPage < totalPages && setCurrentPage((p) => p + 1);
+  const handlePrevPage = () => currentPage > 1 && setCurrentPage((p) => p - 1);
+
+  // ✅ Loading
   if (loading) {
     return (
       <div className="min-h-screen  flex items-center justify-center">
@@ -985,15 +882,14 @@ const VendorDashboard = () => {
           <div className="w-16 h-16 bg-[#a92b4e] rounded-xl flex items-center justify-center mx-auto mb-4 shadow-lg">
             <Loader className="w-8 h-8 text-white animate-spin" />
           </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">
-            Loading Dashboard
-          </h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Loading Dashboard</h2>
           <p className="text-gray-600">Fetching your profile...</p>
         </div>
       </div>
     );
   }
 
+  // ✅ Error with existing vendor
   if (error && vendorId) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-6">
@@ -1013,20 +909,19 @@ const VendorDashboard = () => {
       </div>
     );
   }
+
+  // ✅ No vendor profile -> show create
   if (!vendorId) {
     return (
       <>
         <AlertBox {...alertConfig} onClose={closeAlert} />
 
-        {/* Main screen */}
         <div className="min-h-screen flex items-center justify-center p-6">
           <div className="text-center max-w-lg bg-white rounded-xl p-6 shadow-lg">
             <div className="w-16 h-16 bg-blue-100 rounded-xl flex items-center justify-center mx-auto mb-4">
               <Building2 className="w-8 h-8 text-blue-600" />
             </div>
-            <h2 className="text-xl font-bold text-gray-900 mb-2">
-              Create Your Vendor Profile
-            </h2>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">Create Your Vendor Profile</h2>
             <p className="text-gray-600 mb-4">
               Set up your vendor profile to start showcasing your products!
             </p>
@@ -1039,14 +934,12 @@ const VendorDashboard = () => {
           </div>
         </div>
 
-        {/* ✅ ADD MODAL HERE - Inside the same return block */}
+        {/* Create/Edit Profile Modal */}
         {showEditProfileModal && (
           <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
             <div className="bg-white rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
               <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-[#a92b4e] text-white rounded-t-xl">
-                <h2 className="font-bold">
-                  {vendorId ? "Edit Profile" : "Create Profile"}
-                </h2>
+                <h2 className="font-bold">{vendorId ? "Edit Profile" : "Create Profile"}</h2>
                 <button onClick={() => setShowEditProfileModal(false)}>
                   <X className="w-5 h-5" />
                 </button>
@@ -1069,16 +962,9 @@ const VendorDashboard = () => {
                         <User className="w-8 h-8 text-white" />
                       )}
                     </div>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleLogoUpload}
-                      className="hidden"
-                    />
+                    <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
                   </label>
-                  <p className="text-sm font-medium mt-2">
-                    Click to upload logo
-                  </p>
+                  <p className="text-sm font-medium mt-2">Click to upload logo</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -1097,20 +983,14 @@ const VendorDashboard = () => {
                       } rounded-lg focus:ring-2 focus:ring-[#a92b4e] focus:border-transparent`}
                     />
                     {errors.vendorName && (
-                      <p className="text-xs text-red-500 mt-1">
-                        {errors.vendorName}
-                      </p>
+                      <p className="text-xs text-red-500 mt-1">{errors.vendorName}</p>
                     )}
                   </div>
+
                   <div>
                     <CategoryDropdown
                       value={profileFormData.category}
-                      onChange={(value) =>
-                        setProfileFormData((prev) => ({
-                          ...prev,
-                          category: value,
-                        }))
-                      }
+                      onChange={(value) => setProfileFormData((prev) => ({ ...prev, category: value }))}
                       options={VENDOR_CATEGORIES}
                       required
                     />
@@ -1119,9 +999,7 @@ const VendorDashboard = () => {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Phone *
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Phone *</label>
                     <input
                       type="tel"
                       name="phoneNumber"
@@ -1129,22 +1007,17 @@ const VendorDashboard = () => {
                       onChange={handleProfileInputChange}
                       required
                       className={`w-full px-3 py-2 border ${
-                        errors.phoneNumber
-                          ? "border-red-500"
-                          : "border-gray-300"
+                        errors.phoneNumber ? "border-red-500" : "border-gray-300"
                       } rounded-lg focus:ring-2 focus:ring-[#a92b4e] focus:border-transparent`}
-                      placeholder="+91 9876543210"
+                      placeholder="9876543210"
                     />
                     {errors.phoneNumber && (
-                      <p className="text-xs text-red-500 mt-1">
-                        {errors.phoneNumber}
-                      </p>
+                      <p className="text-xs text-red-500 mt-1">{errors.phoneNumber}</p>
                     )}
                   </div>
+
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Email *
-                    </label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
                     <input
                       type="email"
                       name="email"
@@ -1157,17 +1030,13 @@ const VendorDashboard = () => {
                       placeholder="vendor@example.com"
                     />
                     {errors.email && (
-                      <p className="text-xs text-red-500 mt-1">
-                        {errors.email}
-                      </p>
+                      <p className="text-xs text-red-500 mt-1">{errors.email}</p>
                     )}
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Address *
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Address *</label>
                   <textarea
                     name="address"
                     value={profileFormData.address}
@@ -1179,17 +1048,11 @@ const VendorDashboard = () => {
                     } rounded-lg focus:ring-2 focus:ring-[#a92b4e] focus:border-transparent resize-none`}
                     placeholder="Complete address..."
                   />
-                  {errors.address && (
-                    <p className="text-xs text-red-500 mt-1">
-                      {errors.address}
-                    </p>
-                  )}
+                  {errors.address && <p className="text-xs text-red-500 mt-1">{errors.address}</p>}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Website
-                  </label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Website</label>
                   <input
                     type="url"
                     name="website"
@@ -1201,9 +1064,7 @@ const VendorDashboard = () => {
                     placeholder="https://example.com"
                   />
                   {errors.website && (
-                    <p className="text-xs text-red-500 mt-1">
-                      {errors.website}
-                    </p>
+                    <p className="text-xs text-red-500 mt-1">{errors.website}</p>
                   )}
                 </div>
 
@@ -1215,21 +1076,14 @@ const VendorDashboard = () => {
                   >
                     Cancel
                   </button>
+
                   <button
                     type="submit"
                     disabled={profileUpdateLoading}
                     className="flex-1 bg-[#a92b4e] hover:bg-[#891737] text-white px-4 py-2 rounded-lg disabled:opacity-50 flex items-center justify-center gap-2"
                   >
-                    {profileUpdateLoading ? (
-                      <Loader className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Save className="w-4 h-4" />
-                    )}
-                    {profileUpdateLoading
-                      ? "Saving..."
-                      : vendorId
-                        ? "Update"
-                        : "Create"}
+                    {profileUpdateLoading ? <Loader className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                    {profileUpdateLoading ? "Saving..." : "Create"}
                   </button>
                 </div>
               </form>
@@ -1240,9 +1094,9 @@ const VendorDashboard = () => {
     );
   }
 
+  // ✅ Main dashboard
   return (
-    <div className="min-h-screen  p-4">
-      {/* ✅ Custom Alert Component */}
+    <div className="min-h-screen p-4">
       <AlertBox {...alertConfig} onClose={closeAlert} />
 
       <div className="max-w-6xl mx-auto space-y-6">
@@ -1252,7 +1106,7 @@ const VendorDashboard = () => {
             <div className="flex items-start justify-between gap-4">
               {/* Profile Info */}
               <div className="flex items-start gap-4 flex-1 min-w-0">
-                {/* Logo/Avatar */}
+                {/* Logo */}
                 <div className="relative flex-shrink-0">
                   <div className="w-16 h-16 rounded-lg bg-gray-100 flex items-center justify-center overflow-hidden border-2 border-gray-50">
                     {vendorData.logoUrl ? (
@@ -1265,11 +1119,9 @@ const VendorDashboard = () => {
                       <User className="w-7 h-7 text-gray-400" />
                     )}
                   </div>
-                  {vendorId && (
-                    <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
-                      <CheckCircle className="w-3 h-3 text-white" />
-                    </div>
-                  )}
+                  <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-green-500 rounded-full border-2 border-white flex items-center justify-center">
+                    <CheckCircle className="w-3 h-3 text-white" />
+                  </div>
                 </div>
 
                 {/* Details */}
@@ -1278,7 +1130,7 @@ const VendorDashboard = () => {
                     {vendorData.vendorName || "Complete your profile"}
                   </h1>
 
-                  {/* Categories as Chips */}
+                  {/* Category chips */}
                   {vendorData.category && vendorData.category.length > 0 ? (
                     <div className="flex flex-wrap gap-2 mb-2">
                       {vendorData.category.map((cat) => (
@@ -1295,16 +1147,13 @@ const VendorDashboard = () => {
                   )}
 
                   <div className="flex items-center gap-2 text-xs text-gray-500">
-                    <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
+                    <span className="w-1 h-1 bg-gray-300 rounded-full" />
                     <span>
                       Member since{" "}
-                      {new Date(vendorData.createdAt).toLocaleDateString(
-                        "en-US",
-                        {
-                          month: "short",
-                          year: "numeric",
-                        },
-                      )}
+                      {new Date(vendorData.createdAt).toLocaleDateString("en-US", {
+                        month: "short",
+                        year: "numeric",
+                      })}
                     </span>
                   </div>
 
@@ -1323,19 +1172,19 @@ const VendorDashboard = () => {
                 </div>
               </div>
 
-              {/* Edit Button */}
+              {/* Edit Profile Button */}
               <button
                 onClick={() => setShowEditProfileModal(true)}
                 className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#891737] hover:bg-[#891737]/90 rounded-lg transition-colors flex-shrink-0"
               >
                 <Edit3 className="w-4 h-4" />
-                {vendorId ? "Edit Profile" : "Create Profile"}
+                Edit Profile
               </button>
             </div>
           </div>
         </div>
 
-        {/* Main Content */}
+        {/* Main layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Products */}
           <div className="lg:col-span-2 bg-white rounded-xl border border-gray-100 overflow-hidden">
@@ -1343,69 +1192,63 @@ const VendorDashboard = () => {
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div>
-                  <h2 className="text-sm font-semibold text-gray-900">
-                    Products & Services
-                  </h2>
+                  <h2 className="text-sm font-semibold text-gray-900">Products & Services</h2>
                   <p className="text-xs text-gray-500 mt-0.5">
                     {vendorData.products?.length || 0}{" "}
                     {vendorData.products?.length === 1 ? "item" : "items"}
                   </p>
                 </div>
-                {/* ✅ Refresh Button */}
-                {vendorId && (
-                  <button
-                    onClick={handleRefreshProducts}
-                    disabled={isRefreshing}
-                    className={`p-1.5 rounded-full hover:bg-gray-100 transition-colors ${
-                      isRefreshing
-                        ? "animate-spin text-[#a92b4e]"
-                        : "text-gray-400 hover:text-[#a92b4e]"
-                    }`}
-                    title="Refresh Products"
-                  >
-                    <RefreshCw className="w-4 h-4" />
-                  </button>
-                )}
+
+                <button
+                  onClick={handleRefreshProducts}
+                  disabled={isRefreshing}
+                  className={`p-1.5 rounded-full hover:bg-gray-100 transition-colors ${
+                    isRefreshing
+                      ? "animate-spin text-[#a92b4e]"
+                      : "text-gray-400 hover:text-[#a92b4e]"
+                  }`}
+                  title="Refresh Products"
+                >
+                  <RefreshCw className="w-4 h-4" />
+                </button>
               </div>
 
-              {vendorId && (
-                <button
-                  onClick={() => {
-                    setEditingProduct(null);
-                    setProductFormData({
-                      name: "",
-                      type: "",
-                      subType: "",
-                      description: "",
-                      price: "",
-                      priceFrom: "",
-                      priceTo: "",
-                      link: "",
-                    });
-                    setProductImagePreview(null);
-                    setShowAddProductModal(true);
-                  }}
-                  className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-[#891737] hover:bg-[#891737]/90 rounded-lg transition-colors"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Product
-                </button>
-              )}
+              <button
+                onClick={() => {
+                  setEditingProduct(null);
+                  setShowOtherType(false);
+                  setShowOtherSubType(false);
+                  setProductFormData({
+                    name: "",
+                    type: "",
+                    subType: "",
+                    description: "",
+                    price: "",
+                    priceFrom: "",
+                    priceTo: "",
+                    link: "",
+                  });
+                  setProductImagePreview(null);
+                  setProductImageFile(null);
+                  setShowAddProductModal(true);
+                }}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-[#891737] hover:bg-[#891737]/90 rounded-lg transition-colors"
+              >
+                <Plus className="w-4 h-4" />
+                Add Product
+              </button>
             </div>
 
-            {/* Products List */}
+            {/* Products list */}
             <div className="p-6">
               {currentProducts && currentProducts.length > 0 ? (
                 <>
                   <div className="space-y-3 min-h-[300px]">
-                    {" "}
-                    {/* Min height to prevent layout shift */}
                     {currentProducts.map((product) => (
                       <div
                         key={product.id}
                         className="flex items-start gap-3 p-3 border border-gray-100 rounded-lg hover:border-gray-200 hover:bg-gray-50/50 transition-all"
                       >
-                        {/* Product Image */}
                         <div className="w-14 h-14 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                           <img
                             src={product.imageUrl || "/api/placeholder/56/56"}
@@ -1413,19 +1256,32 @@ const VendorDashboard = () => {
                             className="w-full h-full object-cover"
                           />
                         </div>
+          
 
-                        {/* Product Details */}
                         <div className="flex-1 min-w-0">
                           <h3 className="text-sm font-medium text-gray-900 mb-0.5">
                             {product.name}
                           </h3>
                           <p className="text-xs text-gray-500 mb-1">
-                            {product.type}
+                            {product.type} • {product.subType}
                           </p>
                           <p className="text-xs text-gray-600 line-clamp-2">
                             {product.description}
                           </p>
-
+              {/* Visible on Homepage indicator */}
+  <div className="mt-2">
+    {isVisibleOnHomepage(product) ? (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-green-50 text-green-700 border border-green-100">
+        <span className="w-1.5 h-1.5 rounded-full bg-green-600" />
+        Visible on Homepage
+      </span>
+    ) : (
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-amber-50 text-amber-700 border border-amber-100">
+        <span className="w-1.5 h-1.5 rounded-full bg-amber-600" />
+        Under Review (Not Visible)
+      </span>
+    )}
+  </div>
                           {product.productLink && (
                             <a
                               href={product.productLink}
@@ -1439,40 +1295,33 @@ const VendorDashboard = () => {
                           )}
                         </div>
 
-                        {/* Price & Actions */}
                         <div className="flex flex-col items-end gap-2 flex-shrink-0">
                           <p className="text-sm font-semibold text-gray-900">
-                            {product.price ? (
-                              `₹${product.price.toLocaleString()}`
-                            ) : (
-                              <span className="text-gray-400 font-normal">
-                                Not set
-                              </span>
+                            {product.price ? `₹${String(product.price)}` : (
+                              <span className="text-gray-400 font-normal">Not set</span>
                             )}
                           </p>
-                          {vendorId && (
-                            <div className="flex items-center gap-3">
-                              {/* ✅ Edit Button */}
-                              <button
-                                onClick={() => handleEditClick(product)}
-                                className="text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors flex items-center gap-1"
-                              >
-                                <Edit3 className="w-3 h-3" /> Edit
-                              </button>
-                              <button
-                                onClick={() => handleDeleteProduct(product.id)}
-                                className="text-xs font-medium text-red-600 hover:text-red-700 transition-colors"
-                              >
-                                Remove
-                              </button>
-                            </div>
-                          )}
+
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={() => handleEditClick(product)}
+                              className="text-xs font-medium text-blue-600 hover:text-blue-700 transition-colors flex items-center gap-1"
+                            >
+                              <Edit3 className="w-3 h-3" /> Edit
+                            </button>
+
+                            <button
+                              onClick={() => handleDeleteProduct(product.id)}
+                              className="text-xs font-medium text-red-600 hover:text-red-700 transition-colors"
+                            >
+                              Remove
+                            </button>
+                          </div>
                         </div>
                       </div>
                     ))}
                   </div>
 
-                  {/* ✅ Pagination Controls */}
                   {totalPages > 1 && (
                     <div className="flex items-center justify-between pt-4 mt-4 border-t border-gray-100">
                       <p className="text-xs text-gray-500">
@@ -1498,52 +1347,40 @@ const VendorDashboard = () => {
                   )}
                 </>
               ) : (
-                /* Empty State */
                 <div className="text-center py-12">
                   <div className="w-16 h-16 bg-gray-50 rounded-lg flex items-center justify-center mx-auto mb-3">
                     <Package className="w-8 h-8 text-gray-400" />
                   </div>
-                  <h3 className="text-sm font-semibold text-gray-900 mb-1">
-                    No products yet
-                  </h3>
+                  <h3 className="text-sm font-semibold text-gray-900 mb-1">No products yet</h3>
                   <p className="text-xs text-gray-500 mb-4 max-w-xs mx-auto">
-                    {vendorId
-                      ? "Start building your catalog by adding your first product or service"
-                      : "Create your vendor profile to add products"}
+                    Start building your catalog by adding your first product or service
                   </p>
-                  {vendorId && (
-                    <button
-                      onClick={() => setShowAddProductModal(true)}
-                      className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#891737] hover:bg-[#891737]/90 rounded-lg transition-colors"
-                    >
-                      <Plus className="w-4 h-4" />
-                      Add First Product
-                    </button>
-                  )}
+                  <button
+                    onClick={() => setShowAddProductModal(true)}
+                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#891737] hover:bg-[#891737]/90 rounded-lg transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add First Product
+                  </button>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Contact Info */}
+          {/* Contact info */}
           <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-100">
-              <h2 className="text-sm font-semibold text-gray-900">
-                Contact Information
-              </h2>
+              <h2 className="text-sm font-semibold text-gray-900">Contact Information</h2>
             </div>
 
             <div className="p-6">
               <div className="space-y-3">
-                {/* Phone */}
                 <div className="flex items-start gap-3">
                   <div className="w-9 h-9 bg-gray-50 rounded-lg flex items-center justify-center flex-shrink-0">
                     <Phone className="w-4 h-4 text-gray-600" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-gray-500 mb-0.5">
-                      Phone
-                    </p>
+                    <p className="text-xs font-medium text-gray-500 mb-0.5">Phone</p>
                     {vendorData.phoneNumber ? (
                       <a
                         href={`tel:${vendorData.phoneNumber}`}
@@ -1557,15 +1394,12 @@ const VendorDashboard = () => {
                   </div>
                 </div>
 
-                {/* Email */}
                 <div className="flex items-start gap-3">
                   <div className="w-9 h-9 bg-gray-50 rounded-lg flex items-center justify-center flex-shrink-0">
                     <Mail className="w-4 h-4 text-gray-600" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-gray-500 mb-0.5">
-                      Email
-                    </p>
+                    <p className="text-xs font-medium text-gray-500 mb-0.5">Email</p>
                     {vendorData.email ? (
                       <a
                         href={`mailto:${vendorData.email}`}
@@ -1579,15 +1413,12 @@ const VendorDashboard = () => {
                   </div>
                 </div>
 
-                {/* Website */}
                 <div className="flex items-start gap-3">
                   <div className="w-9 h-9 bg-gray-50 rounded-lg flex items-center justify-center flex-shrink-0">
                     <Globe className="w-4 h-4 text-gray-600" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-gray-500 mb-0.5">
-                      Website
-                    </p>
+                    <p className="text-xs font-medium text-gray-500 mb-0.5">Website</p>
                     {vendorData.website ? (
                       <a
                         href={
@@ -1600,20 +1431,6 @@ const VendorDashboard = () => {
                         className="inline-flex items-center gap-1.5 text-sm text-[#891737] hover:text-[#891737]/80 font-medium transition-colors"
                       >
                         View Website
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="w-3.5 h-3.5"
-                          fill="none"
-                          viewBox="0 0 24 24"
-                          stroke="currentColor"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                          />
-                        </svg>
                       </a>
                     ) : (
                       <p className="text-sm text-gray-400">Not provided</p>
@@ -1621,21 +1438,15 @@ const VendorDashboard = () => {
                   </div>
                 </div>
 
-                {/* Category */}
                 <div className="flex items-start gap-3">
                   <div className="w-9 h-9 bg-gray-50 rounded-lg flex items-center justify-center flex-shrink-0">
                     <Building2 className="w-4 h-4 text-gray-600" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs font-medium text-gray-500 mb-1.5">
-                      Categories
-                    </p>
+                    <p className="text-xs font-medium text-gray-500 mb-1.5">Categories</p>
                     {vendorData.category && vendorData.category.length > 0 ? (
                       <div className="flex flex-wrap gap-2">
-                        {(Array.isArray(vendorData.category)
-                          ? vendorData.category
-                          : vendorData.category.split(", ")
-                        ).map((cat) => (
+                        {vendorData.category.map((cat) => (
                           <span
                             key={cat}
                             className="bg-rose-50 text-rose-700 text-xs px-2.5 py-1 rounded-full whitespace-nowrap"
@@ -1659,25 +1470,26 @@ const VendorDashboard = () => {
       {showAddProductModal && vendorId && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
-            {/* Header */}
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
               <div>
                 <h2 className="text-base font-semibold text-gray-900">
                   {editingProduct ? "Edit Product" : "Add New Product"}
                 </h2>
                 <p className="text-xs text-gray-500 mt-0.5">
-                  {editingProduct
-                    ? "Update product details below"
-                    : "Fill in the product details below"}
+                  {editingProduct ? "Update product details below" : "Fill in the product details below"}
                 </p>
               </div>
+
               <button
                 onClick={() => {
                   setShowAddProductModal(false);
                   setEditingProduct(null);
+                  setShowOtherType(false);
+                  setShowOtherSubType(false);
                   setProductFormData({
                     name: "",
                     type: "",
+                    subType: "",
                     description: "",
                     price: "",
                     priceFrom: "",
@@ -1693,43 +1505,27 @@ const VendorDashboard = () => {
               </button>
             </div>
 
-            {/* Form */}
             <form
               onSubmit={editingProduct ? handleUpdateProduct : handleAddProduct}
               className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]"
             >
               <div className="space-y-4">
-                {/* Image Upload */}
+                {/* Image */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-2">
-                    Product Image
-                  </label>
+                  <label className="block text-xs font-medium text-gray-700 mb-2">Product Image</label>
                   <label className="cursor-pointer block">
                     <div className="w-full h-32 rounded-lg bg-gray-50 border-2 border-dashed border-gray-200 hover:border-gray-300 flex items-center justify-center overflow-hidden transition-colors">
                       {productImagePreview ? (
-                        <img
-                          src={productImagePreview}
-                          alt="Preview"
-                          className="w-full h-full object-cover"
-                        />
+                        <img src={productImagePreview} alt="Preview" className="w-full h-full object-cover" />
                       ) : (
                         <div className="text-center">
                           <ImageIcon className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                          <p className="text-xs text-gray-500">
-                            Click to upload image
-                          </p>
-                          <p className="text-xs text-gray-400 mt-0.5">
-                            Max 5MB
-                          </p>
+                          <p className="text-xs text-gray-500">Click to upload image</p>
+                          <p className="text-xs text-gray-400 mt-0.5">Max 1MB</p>
                         </div>
                       )}
                     </div>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleProductImageUpload}
-                      className="hidden"
-                    />
+                    <input type="file" accept="image/*" onChange={handleProductImageUpload} className="hidden" />
                   </label>
                 </div>
 
@@ -1749,36 +1545,106 @@ const VendorDashboard = () => {
                       placeholder="Enter name"
                     />
                   </div>
+
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-2">
                       Type <span className="text-red-500">*</span>
                     </label>
-                    <input
-                      type="text"
-                      name="type"
-                      value={productFormData.type}
-                      onChange={handleProductInputChange}
-                      required
-                      className="w-full px-3 py-2 text-sm text-gray-900 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-300 transition-colors"
-                      placeholder="Enter specific type (e.g. Sony A7III, Red Dragon)"
-                    />
+
+                    {!showOtherType ? (
+                      <select
+                        value={productFormData.type}
+                        onChange={handleTypeChange}
+                        required
+                        className="w-full px-3 py-2 text-sm text-gray-900 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-300 transition-colors bg-white"
+                      >
+                        <option value="">Select Type</option>
+                        {vendorCategories.map((cat, index) => (
+                          <option key={index} value={cat.name}>
+                            {cat.name}
+                          </option>
+                        ))}
+                        <option value="Other">Other</option>
+                      </select>
+                    ) : (
+                      <div className="relative">
+                        <input
+                          type="text"
+                          name="type"
+                          value={productFormData.type}
+                          onChange={handleProductInputChange}
+                          required
+                          className="w-full px-3 py-2 text-sm text-gray-900 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-300 transition-colors pr-8"
+                          placeholder="Enter custom type"
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowOtherType(false);
+                            setShowOtherSubType(false);
+                            setProductFormData((prev) => ({ ...prev, type: "", subType: "" }));
+                          }}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          title="Back to list"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* Sub-Type */}
+                {/* Sub-Type (REQUIRED) */}
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-2">
                     Sub-Type <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="text"
-                    name="subType"
-                    value={productFormData.subType}
-                    onChange={handleProductInputChange}
-                    required
-                    className="w-full px-3 py-2 text-sm text-gray-900 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-300 transition-colors"
-                    placeholder="Enter sub-category or specific variant"
-                  />
+
+                  {!showOtherSubType && !showOtherType ? (
+                    <select
+                      value={productFormData.subType}
+                      onChange={handleSubTypeChange}
+                      required
+                      disabled={!productFormData.type}
+                      className="w-full px-3 py-2 text-sm text-gray-900 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-300 transition-colors bg-white disabled:bg-gray-50 disabled:text-gray-400"
+                    >
+                      <option value="">Select Sub-Type</option>
+                      {vendorCategories
+                        .find((c) => c.name === productFormData.type)
+                        ?.subcategories?.map((sub, index) => (
+                          <option key={index} value={sub.name}>
+                            {sub.name}
+                          </option>
+                        ))}
+                      <option value="Other">Other</option>
+                    </select>
+                  ) : (
+                    <div className="relative">
+                      <input
+                        type="text"
+                        name="subType"
+                        value={productFormData.subType}
+                        onChange={handleProductInputChange}
+                        required
+                        className="w-full px-3 py-2 text-sm text-gray-900 border border-gray-200 rounded-lg focus:outline-none focus:border-gray-300 transition-colors pr-8"
+                        placeholder="Enter custom sub-type"
+                      />
+                      {!showOtherType && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setShowOtherSubType(false);
+                            setProductFormData((prev) => ({ ...prev, subType: "" }));
+                          }}
+                          className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          title="Back to list"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Description */}
@@ -1797,13 +1663,11 @@ const VendorDashboard = () => {
                   />
                 </div>
 
-                {/* Price Range */}
+                {/* Price range */}
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-2">
                     Price Range (₹){" "}
-                    <span className="text-gray-400 text-xs font-normal">
-                      Optional
-                    </span>
+                    <span className="text-gray-400 text-xs font-normal">Optional</span>
                   </label>
                   <div className="flex items-center gap-2">
                     <input
@@ -1828,13 +1692,11 @@ const VendorDashboard = () => {
                   </div>
                 </div>
 
-                {/* Product Link */}
+                {/* Link */}
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-2">
                     Product Link{" "}
-                    <span className="text-gray-400 text-xs font-normal">
-                      Optional
-                    </span>
+                    <span className="text-gray-400 text-xs font-normal">Optional</span>
                   </label>
                   <input
                     type="url"
@@ -1847,18 +1709,23 @@ const VendorDashboard = () => {
                 </div>
               </div>
 
-              {/* Action Buttons */}
               <div className="flex gap-3 pt-6 mt-6 border-t border-gray-100">
                 <button
                   type="button"
                   onClick={() => {
                     setShowAddProductModal(false);
                     setEditingProduct(null);
+                    setShowOtherType(false);
+                    setShowOtherSubType(false);
                     setProductFormData({
                       name: "",
                       type: "",
+                      subType: "",
                       description: "",
                       price: "",
+                      priceFrom: "",
+                      priceTo: "",
+                      link: "",
                     });
                     setProductImagePreview(null);
                     setProductImageFile(null);
@@ -1867,6 +1734,7 @@ const VendorDashboard = () => {
                 >
                   Cancel
                 </button>
+
                 <button
                   type="submit"
                   disabled={isSubmitting}
@@ -1879,11 +1747,7 @@ const VendorDashboard = () => {
                     </>
                   ) : (
                     <>
-                      {editingProduct ? (
-                        <Save className="w-4 h-4" />
-                      ) : (
-                        <Plus className="w-4 h-4" />
-                      )}
+                      {editingProduct ? <Save className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
                       {editingProduct ? "Update Product" : "Add Product"}
                     </>
                   )}
@@ -1894,21 +1758,14 @@ const VendorDashboard = () => {
         </div>
       )}
 
-      {/* Edit Profile Modal (Added to Main View) */}
+      {/* Edit Profile Modal */}
       {showEditProfileModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-hidden shadow-2xl">
-            {/* Header */}
             <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
               <div>
-                <h2 className="text-base font-semibold text-gray-900">
-                  {vendorId ? "Edit Profile" : "Create Profile"}
-                </h2>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  {vendorId
-                    ? "Update your vendor information"
-                    : "Set up your vendor profile"}
-                </p>
+                <h2 className="text-base font-semibold text-gray-900">Edit Profile</h2>
+                <p className="text-xs text-gray-500 mt-0.5">Update your vendor information</p>
               </div>
               <button
                 onClick={() => setShowEditProfileModal(false)}
@@ -1918,17 +1775,13 @@ const VendorDashboard = () => {
               </button>
             </div>
 
-            {/* Form */}
             <form
-              onSubmit={vendorId ? handleUpdateProfile : handleCreateProfile}
+              onSubmit={handleUpdateProfile}
               className="p-6 overflow-y-auto max-h-[calc(90vh-80px)]"
             >
               <div className="space-y-5">
-                {/* Logo Upload */}
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-2">
-                    Profile Logo
-                  </label>
+                  <label className="block text-xs font-medium text-gray-700 mb-2">Profile Logo</label>
                   <div className="flex items-center gap-4">
                     <label className="cursor-pointer">
                       <div className="w-20 h-20 rounded-lg bg-gray-100 border-2 border-gray-200 hover:border-gray-300 flex items-center justify-center overflow-hidden transition-colors">
@@ -1942,33 +1795,21 @@ const VendorDashboard = () => {
                           <User className="w-8 h-8 text-gray-400" />
                         )}
                       </div>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handleLogoUpload}
-                        className="hidden"
-                      />
+                      <input type="file" accept="image/*" onChange={handleLogoUpload} className="hidden" />
                     </label>
                     <div>
                       <button
                         type="button"
-                        onClick={() =>
-                          document.querySelector('input[type="file"]').click()
-                        }
+                        onClick={() => document.querySelector('input[type="file"]')?.click()}
                         className="text-sm font-medium text-[#891737] hover:text-[#891737]/80 transition-colors"
                       >
-                        {logoPreview || vendorData.logoUrl
-                          ? "Change Logo"
-                          : "Upload Logo"}
+                        Change Logo
                       </button>
-                      <p className="text-xs text-gray-500 mt-1">
-                        PNG, JPG up to 5MB
-                      </p>
+                      <p className="text-xs text-gray-500 mt-1">PNG, JPG up to 5MB</p>
                     </div>
                   </div>
                 </div>
 
-                {/* Vendor Name & Category */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-2">
@@ -1983,30 +1824,20 @@ const VendorDashboard = () => {
                       className={`w-full px-3 py-2 text-sm text-gray-900 border ${
                         errors.vendorName ? "border-red-500" : "border-gray-200"
                       } rounded-lg focus:outline-none focus:border-gray-300 transition-colors`}
-                      placeholder="Enter vendor name"
                     />
-                    {errors.vendorName && (
-                      <p className="text-xs text-red-500 mt-1">
-                        {errors.vendorName}
-                      </p>
-                    )}
+                    {errors.vendorName && <p className="text-xs text-red-500 mt-1">{errors.vendorName}</p>}
                   </div>
+
                   <div>
                     <CategoryDropdown
                       value={profileFormData.category}
-                      onChange={(value) =>
-                        setProfileFormData((prev) => ({
-                          ...prev,
-                          category: value,
-                        }))
-                      }
+                      onChange={(value) => setProfileFormData((prev) => ({ ...prev, category: value }))}
                       options={VENDOR_CATEGORIES}
                       required
                     />
                   </div>
                 </div>
 
-                {/* Phone & Email */}
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-2">
@@ -2019,18 +1850,12 @@ const VendorDashboard = () => {
                       onChange={handleProfileInputChange}
                       required
                       className={`w-full px-3 py-2 text-sm text-gray-900 border ${
-                        errors.phoneNumber
-                          ? "border-red-500"
-                          : "border-gray-200"
+                        errors.phoneNumber ? "border-red-500" : "border-gray-200"
                       } rounded-lg focus:outline-none focus:border-gray-300 transition-colors`}
-                      placeholder="+91 9876543210"
                     />
-                    {errors.phoneNumber && (
-                      <p className="text-xs text-red-500 mt-1">
-                        {errors.phoneNumber}
-                      </p>
-                    )}
+                    {errors.phoneNumber && <p className="text-xs text-red-500 mt-1">{errors.phoneNumber}</p>}
                   </div>
+
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-2">
                       Email Address <span className="text-red-500">*</span>
@@ -2044,17 +1869,11 @@ const VendorDashboard = () => {
                       className={`w-full px-3 py-2 text-sm text-gray-900 border ${
                         errors.email ? "border-red-500" : "border-gray-200"
                       } rounded-lg focus:outline-none focus:border-gray-300 transition-colors`}
-                      placeholder="vendor@example.com"
                     />
-                    {errors.email && (
-                      <p className="text-xs text-red-500 mt-1">
-                        {errors.email}
-                      </p>
-                    )}
+                    {errors.email && <p className="text-xs text-red-500 mt-1">{errors.email}</p>}
                   </div>
                 </div>
 
-                {/* Address */}
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-2">
                     Business Address <span className="text-red-500">*</span>
@@ -2068,22 +1887,13 @@ const VendorDashboard = () => {
                     className={`w-full px-3 py-2 text-sm text-gray-900 border ${
                       errors.address ? "border-red-500" : "border-gray-200"
                     } rounded-lg focus:outline-none focus:border-gray-300 transition-colors resize-none`}
-                    placeholder="Complete business address..."
                   />
-                  {errors.address && (
-                    <p className="text-xs text-red-500 mt-1">
-                      {errors.address}
-                    </p>
-                  )}
+                  {errors.address && <p className="text-xs text-red-500 mt-1">{errors.address}</p>}
                 </div>
 
-                {/* Website */}
                 <div>
                   <label className="block text-xs font-medium text-gray-700 mb-2">
-                    Website{" "}
-                    <span className="text-gray-400 text-xs font-normal">
-                      Optional
-                    </span>
+                    Website <span className="text-gray-400 text-xs font-normal">Optional</span>
                   </label>
                   <input
                     type="url"
@@ -2095,15 +1905,10 @@ const VendorDashboard = () => {
                     } rounded-lg focus:outline-none focus:border-gray-300 transition-colors`}
                     placeholder="https://yourwebsite.com"
                   />
-                  {errors.website && (
-                    <p className="text-xs text-red-500 mt-1">
-                      {errors.website}
-                    </p>
-                  )}
+                  {errors.website && <p className="text-xs text-red-500 mt-1">{errors.website}</p>}
                 </div>
               </div>
 
-              {/* Action Buttons */}
               <div className="flex gap-3 pt-6 mt-6 border-t border-gray-100">
                 <button
                   type="button"
@@ -2112,6 +1917,7 @@ const VendorDashboard = () => {
                 >
                   Cancel
                 </button>
+
                 <button
                   type="submit"
                   disabled={profileUpdateLoading}
@@ -2125,7 +1931,7 @@ const VendorDashboard = () => {
                   ) : (
                     <>
                       <Save className="w-4 h-4" />
-                      {vendorId ? "Update Profile" : "Create Profile"}
+                      Update Profile
                     </>
                   )}
                 </button>

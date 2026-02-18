@@ -480,6 +480,7 @@ const ProducerRegistration = ({ onSuccess }) => {
           sectionData[key] = {
             name: sectionData[key].name,
             size: sectionData[key].size,
+            type: sectionData[key].type,
             lastModified: sectionData[key].lastModified,
             isFile: true,
             type: sectionData[key].type,

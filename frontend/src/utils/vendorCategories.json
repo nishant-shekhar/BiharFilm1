@@ -1,0 +1,437 @@
+[
+    {
+        "name": "Camera & Imaging Equipment",
+        "subcategories": [
+            {
+                "name": "Digital Cinema Cameras"
+            },
+            {
+                "name": "Film Cameras"
+            },
+            {
+                "name": "Mirrorless / DSLR"
+            },
+            {
+                "name": "Cine Lenses"
+            },
+            {
+                "name": "Anamorphic Lenses"
+            },
+            {
+                "name": "Zoom Lenses"
+            },
+            {
+                "name": "Prime Lenses"
+            },
+            {
+                "name": "Camera Filters"
+            },
+            {
+                "name": "Matte Box"
+            },
+            {
+                "name": "Follow Focus"
+            },
+            {
+                "name": "Camera Monitors"
+            },
+            {
+                "name": "Wireless Video Systems"
+            },
+            {
+                "name": "Gimbals & Stabilizers"
+            },
+            {
+                "name": "Steadicam Systems"
+            },
+            {
+                "name": "Tripods & Heads"
+            },
+            {
+                "name": "Sliders & Dollies"
+            },
+            {
+                "name": "Jib / Crane"
+            },
+            {
+                "name": "Drone Cameras"
+            },
+            {
+                "name": "Action Cameras"
+            },
+            {
+                "name": "DIT Equipment"
+            },
+            {
+                "name": "Camera Batteries & Media"
+            }
+        ]
+    },
+    {
+        "name": "Sound & Audio Equipment",
+        "subcategories": [
+            {
+                "name": "Boom Microphones"
+            },
+            {
+                "name": "Lavalier Microphones"
+            },
+            {
+                "name": "Wireless Mic Systems"
+            },
+            {
+                "name": "Shotgun Microphones"
+            },
+            {
+                "name": "Field Audio Recorders"
+            },
+            {
+                "name": "Sound Mixers"
+            },
+            {
+                "name": "Audio Interfaces"
+            },
+            {
+                "name": "Monitoring Headphones"
+            },
+            {
+                "name": "Timecode Devices"
+            },
+            {
+                "name": "Foley Recording Equipment"
+            }
+        ]
+    },
+    {
+        "name": "Lighting Equipment",
+        "subcategories": [
+            {
+                "name": "HMI Lights"
+            },
+            {
+                "name": "LED Panel Lights"
+            },
+            {
+                "name": "Fresnel Lights"
+            },
+            {
+                "name": "Tungsten Lights"
+            },
+            {
+                "name": "Tube Lights"
+            },
+            {
+                "name": "Skypanels"
+            },
+            {
+                "name": "Softboxes"
+            },
+            {
+                "name": "Reflectors & Diffusers"
+            },
+            {
+                "name": "Light Stands"
+            },
+            {
+                "name": "C-Stands"
+            },
+            {
+                "name": "Flags & Cutters"
+            },
+            {
+                "name": "Grip Equipment"
+            },
+            {
+                "name": "Generators"
+            },
+            {
+                "name": "Power Distribution Boxes"
+            }
+        ]
+    },
+    {
+        "name": "Production Vehicles",
+        "subcategories": [
+            {
+                "name": "Vanity Vans"
+            },
+            {
+                "name": "Makeup Vans"
+            },
+            {
+                "name": "Production Caravans"
+            },
+            {
+                "name": "Camera Trucks"
+            },
+            {
+                "name": "Lighting Trucks"
+            },
+            {
+                "name": "Generator Vans"
+            },
+            {
+                "name": "Equipment Transport Vehicles"
+            }
+        ]
+    },
+    {
+        "name": "Art Department & Set Design",
+        "subcategories": [
+            {
+                "name": "Set Construction"
+            },
+            {
+                "name": "Set Fabrication"
+            },
+            {
+                "name": "Carpentry Services"
+            },
+            {
+                "name": "Prop Suppliers"
+            },
+            {
+                "name": "Furniture Rental"
+            },
+            {
+                "name": "Background Props"
+            },
+            {
+                "name": "Set Decoration"
+            },
+            {
+                "name": "Scenic Painting"
+            },
+            {
+                "name": "Green Screen Setup"
+            }
+        ]
+    },
+    {
+        "name": "Costume & Styling",
+        "subcategories": [
+            {
+                "name": "Costume Designers"
+            },
+            {
+                "name": "Costume Rental"
+            },
+            {
+                "name": "Jewelry Rental"
+            },
+            {
+                "name": "Period Costumes"
+            },
+            {
+                "name": "Uniform Suppliers"
+            },
+            {
+                "name": "Tailoring Services"
+            },
+            {
+                "name": "Laundry Services"
+            }
+        ]
+    },
+    {
+        "name": "Makeup & Hair",
+        "subcategories": [
+            {
+                "name": "Makeup Artists"
+            },
+            {
+                "name": "Hair Stylists"
+            },
+            {
+                "name": "Prosthetic Makeup"
+            },
+            {
+                "name": "Special Effects Makeup"
+            },
+            {
+                "name": "Wig Suppliers"
+            },
+            {
+                "name": "Vanity Setup Equipment"
+            }
+        ]
+    },
+    {
+        "name": "Catering & Hospitality",
+        "subcategories": [
+            {
+                "name": "Film Catering Services"
+            },
+            {
+                "name": "Craft Services"
+            },
+            {
+                "name": "Tea / Coffee Services"
+            },
+            {
+                "name": "Packed Meal Suppliers"
+            },
+            {
+                "name": "Outdoor Catering"
+            },
+            {
+                "name": "Hotel Accommodation"
+            },
+            {
+                "name": "Guest House Providers"
+            },
+            {
+                "name": "Artist Hospitality"
+            }
+        ]
+    },
+    {
+        "name": "Location & Studio Facilities",
+        "subcategories": [
+            {
+                "name": "Location Scouting"
+            },
+            {
+                "name": "Farmhouse Rental"
+            },
+            {
+                "name": "Studio Floors"
+            },
+            {
+                "name": "Shooting Studios"
+            },
+            {
+                "name": "Sound Stages"
+            },
+            {
+                "name": "Green Screen Studios"
+            },
+            {
+                "name": "Virtual Production Studios"
+            },
+            {
+                "name": "Rehearsal Halls"
+            }
+        ]
+    },
+    {
+        "name": "Post Production Services",
+        "subcategories": [
+            {
+                "name": "Video Editing"
+            },
+            {
+                "name": "Color Grading"
+            },
+            {
+                "name": "DI Studio"
+            },
+            {
+                "name": "VFX Services"
+            },
+            {
+                "name": "CGI Animation"
+            },
+            {
+                "name": "Motion Graphics"
+            },
+            {
+                "name": "Title Design"
+            },
+            {
+                "name": "Sound Design"
+            },
+            {
+                "name": "Background Score"
+            },
+            {
+                "name": "Dubbing Studio"
+            },
+            {
+                "name": "ADR Studio"
+            },
+            {
+                "name": "Subtitle Services"
+            },
+            {
+                "name": "Trailer Editing"
+            }
+        ]
+    },
+    {
+        "name": "Crew & Talent Services",
+        "subcategories": [
+            {
+                "name": "Line Producers"
+            },
+            {
+                "name": "Production Managers"
+            },
+            {
+                "name": "Assistant Directors"
+            },
+            {
+                "name": "Cinematographers"
+            },
+            {
+                "name": "Camera Operators"
+            },
+            {
+                "name": "Sound Engineers"
+            },
+            {
+                "name": "Light Technicians"
+            },
+            {
+                "name": "Spot Boys"
+            },
+            {
+                "name": "Casting Agencies"
+            },
+            {
+                "name": "Actors"
+            },
+            {
+                "name": "Junior Artists"
+            },
+            {
+                "name": "Stunt Coordinators"
+            },
+            {
+                "name": "Choreographers"
+            },
+            {
+                "name": "Script Writers"
+            },
+            {
+                "name": "Dialogue Writers"
+            }
+        ]
+    },
+    {
+        "name": "Legal & Compliance",
+        "subcategories": [
+            {
+                "name": "Shooting Permissions"
+            },
+            {
+                "name": "Police Permissions"
+            },
+            {
+                "name": "Drone Permissions"
+            },
+            {
+                "name": "Film Insurance"
+            },
+            {
+                "name": "Equipment Insurance"
+            },
+            {
+                "name": "Copyright Registration"
+            },
+            {
+                "name": "Music Licensing"
+            }
+        ]
+    }
+]

@@ -260,7 +260,7 @@ const Security = ({ onClose }) => {
       </button>
 
       {/* LEFT SIDEBAR - Fixed Width */}
-      <div className="w-72 border-r border-gray-100 bg-white/50 backdrop-blur-xl h-screen sticky top-0 flex flex-col z-40 lg:flex">
+      <div className="w-72 border-r border-gray-100 bg-white/50 backdrop-blur-xl h-screen sticky top-0 flex flex-col z-40 hidden lg:flex">
         {/* Sidebar Header */}
         <div className="p-4 border-b border-gray-100/50">
           {/* Search Bar - Smaller Size */}
