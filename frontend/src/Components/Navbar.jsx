@@ -240,8 +240,10 @@ const Navbar = () => {
                   </li>
                   <li
                     onClick={() => {
-                      navigate("/document/op-guidelines");
-                      setIsMobileMenuOpen(false);
+                      const link = document.createElement("a");
+                      link.href = "/OpGuidelineFilms.pdf";
+                      link.download = "OpGuidelineFilms.pdf";
+                      link.click();
                     }}
                     className="px-4 py-2 hover:bg-gray-200 hover:text-red-600"
                   >
@@ -501,7 +503,10 @@ const Navbar = () => {
               </li>
               <li
                 onClick={() => {
-                  navigate("/document/op-guidelines");
+                  const link = document.createElement("a");
+                  link.href = "/OpGuidelineFilms.pdf";
+                  link.download = "OpGuidelineFilms.pdf";
+                  link.click();
                   setIsMobileMenuOpen(false);
                 }}
                 className="cursor-pointer hover:text-red-500 transition-colors"

@@ -78,6 +78,19 @@ const Security = ({ onClose }) => {
     "Hair Stylist",
     "Wig Maker",
     "DI Colourist",
+    "Director",
+    "Assistant Director",
+    "Casting Director",
+    "Line Producer",
+    "Production Manager",
+    "Production Assistant",
+    "Spot Boys",
+    "Animation-Graphic & Special Effect Artist",
+    "Still Photographer",
+    "BTS Maker",
+    "Action Director(Fight Master)",
+    "Fighter",
+    "",
   ];
 
   useEffect(() => {
