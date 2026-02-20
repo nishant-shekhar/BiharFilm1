@@ -13,6 +13,7 @@ const Navbar = () => {
   const [isHomeDropdownOpen, setIsHomeDropdownOpen] = useState(false);
   const [isPolicyDropdownOpen, setIsPolicyDropdownOpen] = useState(false);
   const [isImpactDropdownOpen, setIsImpactDropdownOpen] = useState(false);
+  const [isCinemaEcosystemDropdownOpen, setIsCinemaEcosystemDropdownOpen] = useState(false);
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -134,7 +135,7 @@ const Navbar = () => {
 
           {/* Desktop Menu */}
           <ul
-            className={`hidden md:flex items-center gap-10 text-lg relative z-10 transition-colors duration-300 ${
+            className={`hidden md:flex items-center gap-6 text-base relative z-10 transition-colors duration-300 ${
               navbarVisible && hasScrolled ? "text-black" : "text-white"
             } group-hover:text-black`}
           >
@@ -240,10 +241,8 @@ const Navbar = () => {
                   </li>
                   <li
                     onClick={() => {
-                      const link = document.createElement("a");
-                      link.href = "/OpGuidelineFilms.pdf";
-                      link.download = "OpGuidelineFilms.pdf";
-                      link.click();
+                      navigate("/document/op-guidelines");
+                      setIsMobileMenuOpen(false);
                     }}
                     className="px-4 py-2 hover:bg-gray-200 hover:text-red-600"
                   >
@@ -268,6 +267,46 @@ const Navbar = () => {
                     className="px-4 py-2 hover:bg-gray-200 hover:text-red-600"
                   >
                     MOA
+                  </li>
+                </ul>
+              )}
+            </li>
+
+            {/* Cinema Ecosystem Dropdown */}
+            <li
+              className="relative cursor-pointer hover:text-red-600 font-semibold transition flex items-center"
+              onMouseEnter={() => setIsCinemaEcosystemDropdownOpen(true)}
+              onMouseLeave={() => setIsCinemaEcosystemDropdownOpen(false)}
+            >
+              Cinema Ecosystem <ChevronDown size={16} className="ml-1" />
+              {isCinemaEcosystemDropdownOpen && (
+                <ul className="absolute top-full left-0 w-56 bg-white text-black shadow-lg rounded-md overflow-hidden z-50">
+                  <li
+                    onClick={() => {
+                      navigate("/", { state: { scrollTo: "Cinemaecosystem", openPopup: "map" } });
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="px-4 py-2 hover:bg-gray-200 hover:text-red-600"
+                  >
+                    Production Assets
+                  </li>
+                  <li
+                    onClick={() => {
+                      navigate("/", { state: { scrollTo: "Cinemaecosystem", openPopup: "localArtist" } });
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="px-4 py-2 hover:bg-gray-200 hover:text-red-600"
+                  >
+                    Local Artist
+                  </li>
+                  <li
+                    onClick={() => {
+                      navigate("/", { state: { scrollTo: "Cinemaecosystem", openPopup: "security" } });
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="px-4 py-2 hover:bg-gray-200 hover:text-red-600"
+                  >
+                    Local Technicians & Manpower
                   </li>
                 </ul>
               )}
@@ -503,10 +542,7 @@ const Navbar = () => {
               </li>
               <li
                 onClick={() => {
-                  const link = document.createElement("a");
-                  link.href = "/OpGuidelineFilms.pdf";
-                  link.download = "OpGuidelineFilms.pdf";
-                  link.click();
+                  navigate("/document/op-guidelines");
                   setIsMobileMenuOpen(false);
                 }}
                 className="cursor-pointer hover:text-red-500 transition-colors"
@@ -534,6 +570,40 @@ const Navbar = () => {
                 className="cursor-pointer hover:text-red-500 transition-colors"
               >
                 MOA
+              </li>
+            </ul>
+
+            {/* Cinema Ecosystem Section */}
+            <li className="mt-2 text-gray-300 border-b border-gray-700 pb-1">
+              Cinema Ecosystem
+            </li>
+            <ul className="ml-4 flex flex-col gap-3">
+              <li
+                onClick={() => {
+                  navigate("/", { state: { scrollTo: "Cinemaecosystem", openPopup: "map" } });
+                  setIsMobileMenuOpen(false);
+                }}
+                className="cursor-pointer hover:text-red-500 transition-colors"
+              >
+                Production Assets
+              </li>
+              <li
+                onClick={() => {
+                  navigate("/", { state: { scrollTo: "Cinemaecosystem", openPopup: "localArtist" } });
+                  setIsMobileMenuOpen(false);
+                }}
+                className="cursor-pointer hover:text-red-500 transition-colors"
+              >
+                Local Artist
+              </li>
+              <li
+                onClick={() => {
+                  navigate("/", { state: { scrollTo: "Cinemaecosystem", openPopup: "security" } });
+                  setIsMobileMenuOpen(false);
+                }}
+                className="cursor-pointer hover:text-red-500 transition-colors"
+              >
+                Local Technicians & Manpower
               </li>
             </ul>
 

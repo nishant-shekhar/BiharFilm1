@@ -770,7 +770,7 @@ const Card = ({ p }) => {
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-3 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-3 mb-8 custom-scrollbar">
           {menuLoading ? (
             <div className="px-2 py-6">
               <p className="text-xs text-gray-400">Loading menu...</p>

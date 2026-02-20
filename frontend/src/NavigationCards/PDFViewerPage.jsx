@@ -14,6 +14,7 @@ const PDFViewerPage = () => {
     "goa-film-brochure": "/GoaFilmBrochure.png",
     "promotion-policy": "/PromotionPolicy.png",
     "film-policy": "/filmPolicy.pdf",
+    "op-guidelines": "/OpGuidelineFilms.pdf",
   };
 
   // If no docId → Show list of documents UI

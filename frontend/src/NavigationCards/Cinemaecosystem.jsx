@@ -1,14 +1,17 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Longcards from "../Cards/Longcards";
 import { IoIosArrowRoundForward } from "react-icons/io";
 import { motion } from "framer-motion";
 import ProductionAssets from "../Cards/ProductionAssets";
 import LocalArtist from "../Cards/LocalArtist";
 import LocalTechnicians from "../Cards/LocalTechnicians";
+import { useLocation } from "react-router-dom";
 import "../App.css";
 
 function Cinemaecosystem() {
   const [activePopup, setActivePopup] = useState(null);
+  const location = useLocation();
+  const hasProcessedStateRef = useRef(false);
 
   // Prevent background scroll when modal is open
   useEffect(() => {
@@ -20,12 +23,33 @@ function Cinemaecosystem() {
     return () => document.body.classList.remove("overflow-hidden");
   }, [activePopup]);
 
+  // Handle popup from route state (from navbar navigation)
+  useEffect(() => {
+    const openPopup = location && location.state && location.state.openPopup;
+    if (openPopup && !hasProcessedStateRef.current) {
+      // wait briefly so any scrolling triggered by the Home component can finish
+      const timer = setTimeout(() => {
+        setActivePopup(openPopup);
+      }, 300);
+
+      hasProcessedStateRef.current = true;
+
+      // Clear the navigation state so it doesn't persist on refresh
+      try {
+        window.history.replaceState(null, document.title, window.location.pathname);
+      } catch (e) {}
+
+      return () => clearTimeout(timer);
+    }
+  }, [location]);
+
   const handleCardClick = (popupType) => {
     setActivePopup(popupType);
   };
 
   const handleClose = () => {
     setActivePopup(null);
+    hasProcessedStateRef.current = false;
   };
 
   // Close modal when clicking outside
