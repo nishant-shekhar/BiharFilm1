@@ -28,10 +28,10 @@ import {
 } from "../Dashboard/ArtistProfileComponents";
 
 const Disclaimer = () => (
-  <div className="pt-8 pb-4">
+  <div className="pt-8 pb-4 mb-16">
     <div className="bg-gray-50 border border-gray-100 rounded-2xl p-6">
       <p className="text-[10px] leading-relaxed text-gray-400 font-medium text-center italic">
-        <span className="font-bold text-gray-500 uppercase tracking-widest not-italic mr-1">
+        <span className="font-bold text-gray-700 uppercase tracking-widest not-italic mr-1">
           Disclaimer:
         </span>
         The information and data displayed on this portal are provided solely by
