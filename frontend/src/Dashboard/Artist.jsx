@@ -218,6 +218,35 @@ const Artist = ({ searchQuery }) => {
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [selectedRole, setSelectedRole] = useState("");
   const [selectedDistrict, setSelectedDistrict] = useState("");
+
+  // Function to extract video thumbnail from URL
+  const getVideoThumbnail = (url) => {
+    if (!url) return null;
+
+    try {
+      // YouTube
+      const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+      const youtubeMatch = url.match(youtubeRegex);
+      if (youtubeMatch) {
+        const videoId = youtubeMatch[1];
+        return `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+      }
+
+      // Vimeo
+      const vimeoRegex = /(?:vimeo\.com\/)(?:.*#|.*\/videos\/|.*\/|channels\/.*\/|groups\/.*\/videos\/|album\/.*\/video\/|video\/)?([0-9]+)(?:$|\/|\?)/;
+      const vimeoMatch = url.match(vimeoRegex);
+      if (vimeoMatch) {
+        const videoId = vimeoMatch[1];
+        return `https://vumbnail.com/${videoId}.jpg`;
+      }
+
+      // For other video platforms or direct video files, return a default thumbnail
+      return null;
+    } catch (error) {
+      console.error('Error extracting video thumbnail:', error);
+      return null;
+    }
+  };
   const [selectedArtistIds, setSelectedArtistIds] = useState([]);
 
   // Check if artist is verified (handles boolean true, 1 "1")
@@ -1428,27 +1457,48 @@ const Artist = ({ searchQuery }) => {
                           Video Portfolio
                         </h4>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          {selectedArtist.videos.map((vid, i) => (
-                            <a
-                              key={i}
-                              href={vid.url}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="group flex items-center gap-3 p-3 bg-gray-50/50 rounded-xl border border-gray-100 hover:border-[#891737]/30 transition-all"
-                            >
-                              <div className="w-10 h-10 rounded-lg bg-white border border-gray-100 flex items-center justify-center text-gray-400 group-hover:text-[#891737] transition-colors">
-                                <PlayCircle className="w-5 h-5" />
-                              </div>
-                              <div className="min-w-0 flex-1">
-                                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                                  Video Item {i + 1}
-                                </p>
-                                <p className="text-xs font-semibold text-gray-700 truncate mt-0.5">
-                                  Visit Video Link
-                                </p>
-                              </div>
-                            </a>
-                          ))}
+                          {selectedArtist.videos.map((vid, i) => {
+                            const thumbnail = getVideoThumbnail(vid.url);
+                            return (
+                              <a
+                                key={i}
+                                href={vid.url}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="group block overflow-hidden rounded-xl border border-gray-100 hover:border-[#891737]/30 transition-all hover:shadow-md"
+                              >
+                                <div className="relative aspect-video bg-gray-100">
+                                  {thumbnail ? (
+                                    <img
+                                      src={thumbnail}
+                                      alt={`Video ${i + 1} thumbnail`}
+                                      className="w-full h-full object-cover"
+                                      onError={(e) => {
+                                        // Fallback to default thumbnail if image fails to load
+                                        e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJDMTMuMSAyIDE0IDIuOSAxNCA0VjE2QzE0IDE3LjEgMTMuMSAxOCA5IDE4QzQuOSAxOCA0IDE3LjEgNCAxNlY0QzQgMi45IDQuOSAyIDYgMkg5QzEwLjEgMiAxMSAyLjkgMTEgNFY2SDR2MTBjMCAuNTUuMiAxIC41IDEuNWwxIDFoN2wxLTEgVjYuNVoiIGZpbGw9IiM5Q0E0QUYiLz4KPC9zdmc+';
+                                      }}
+                                    />
+                                  ) : (
+                                    <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                                      <PlayCircle className="w-12 h-12 text-gray-400" />
+                                    </div>
+                                  )}
+                                  {/* Play overlay */}
+                                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                    <PlayCircle className="w-16 h-16 text-white drop-shadow-lg" />
+                                  </div>
+                                </div>
+                                <div className="p-3 bg-white">
+                                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                                    Video {i + 1}
+                                  </p>
+                                  <p className="text-sm font-medium text-gray-700 truncate mt-1">
+                                    {vid.title || 'Untitled Video'}
+                                  </p>
+                                </div>
+                              </a>
+                            );
+                          })}
                         </div>
                       </div>
                     )}

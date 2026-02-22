@@ -157,6 +157,8 @@ export const updateProfile = async (currentArtist, updates) => {
     "linkedIn",
     "bestFilm", // For Bio Data Link
     "showPhonePublic",
+    "showAgePublic",
+    "showAddressPublic",
   ].forEach((key) => {
     if (merged[key] !== undefined && merged[key] !== null) {
       data.append(key, merged[key]);
@@ -733,6 +735,7 @@ export const AboutMeCard = ({ artist, onUpdate, readOnly = false }) => {
 
   useEffect(() => {
     setFormData({
+      description: artist.description || "",
       description: artist.description || "",
     });
   }, [artist]);
@@ -1480,7 +1483,7 @@ const MAX_PHONE_DIGITS = 12;
 
 const getMaxDobDate = () => {
   const d = new Date();
-  d.setFullYear(d.getFullYear() - 8); // must be at least 8 years old
+  d.setFullYear(d.getFullYear() - 0); // must be at least 0 years old
   return d.toISOString().split("T")[0]; // yyyy-mm-dd
 };
 
@@ -1493,6 +1496,47 @@ const calcAge = (yyyy_mm_dd) => {
   const m = today.getMonth() - dob.getMonth();
   if (m < 0 || (m === 0 && today.getDate() < dob.getDate())) age--;
   return age;
+};
+const normalizeStringListDeep = (value, maxDepth = 6) => {
+  let v = value;
+
+  // unwrap JSON strings repeatedly: '["A"]' -> ["A"], or '"[\"A\"]"' -> ["A"]
+  for (let i = 0; i < maxDepth; i++) {
+    if (typeof v === "string") {
+      const s = v.trim();
+      if (
+        (s.startsWith("[") && s.endsWith("]")) ||
+        (s.startsWith('"[') && s.endsWith(']"')) ||
+        (s.startsWith('"') && s.endsWith('"'))
+      ) {
+        try {
+          v = JSON.parse(v);
+          continue;
+        } catch {
+          // not valid JSON, stop trying
+        }
+      }
+    }
+    break;
+  }
+
+  // normalize objects / strings into string array
+  if (Array.isArray(v)) {
+    return v
+      .flatMap((item) => {
+        if (item == null) return [];
+        if (typeof item === "object") return [item.name || item.label || item.value || ""];
+        if (typeof item === "string") return [item];
+        return [];
+      })
+      .map((s) => String(s).trim())
+      .filter(Boolean);
+  }
+
+  // single object/string
+  if (typeof v === "object" && v) return [v.name || v.label || v.value].filter(Boolean);
+  if (typeof v === "string" && v.trim()) return [v.trim()];
+  return [];
 };
 
 // NOTE: validateFile must exist in your project as you already used it.
@@ -1515,12 +1559,13 @@ export const EditProfileModal = ({
     address: base.address || "",
     showPhonePublic:
       base.showPhonePublic === true || base.showPhonePublic === "true",
+    showAgePublic:
+      base.showAgePublic === true || base.showAgePublic === "true",
+    showAddressPublic:
+      base.showAddressPublic === true || base.showAddressPublic === "true",
     image: null,
-    professions:
-      base.professions?.map((p) => (typeof p === "object" ? p.name : p)) || [],
-    specializations:
-      base.specializations?.map((s) => (typeof s === "object" ? s.name : s)) ||
-      [],
+    professions: normalizeStringListDeep(base.professions),
+specializations: normalizeStringListDeep(base.specializations),
   });
 
   const [selectedCategory, setSelectedCategory] = useState("");
@@ -1579,12 +1624,12 @@ export const EditProfileModal = ({
   }, [formData.professions]);
 
   const availableSpecializations = React.useMemo(() => {
-    if (!formData.professions.length) return PREDEFINED_SPECIALIZATIONS;
-    const relevant = formData.professions.flatMap(
-      (p) => ROLE_SPECIALIZATIONS[p] || [],
-    );
-    return relevant.length > 0 ? [...new Set(relevant), "Others"] : ["Others"];
-  }, [formData.professions]);
+  const profs = normalizeStringListDeep(formData.professions);
+  if (!profs.length) return PREDEFINED_SPECIALIZATIONS;
+
+  const relevant = profs.flatMap((p) => ROLE_SPECIALIZATIONS[p] || []);
+  return relevant.length > 0 ? [...new Set(relevant), "Others"] : ["Others"];
+}, [formData.professions]);
 
   const addTag = (field, val, list, setter) => {
     if (val && !list.includes(val))
@@ -1643,124 +1688,65 @@ export const EditProfileModal = ({
     setTempImageSrc(null);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
+ const handleSubmit = async (e) => {
+  e.preventDefault();
+  setIsSubmitting(true);
 
-    // ✅ DOB validation: must be >= 8 years
-    const age = calcAge(formData.dob);
-    if (age !== null && age < 8) {
-      alert("Age must be at least 8 years.");
-      setIsSubmitting(false);
-      return;
-    }
+  try {
+    const data = new FormData();
 
-    // Validation
-    if (
-      !formData.fullName ||
-      !formData.email ||
-      !formData.phoneNumber ||
-      !formData.dob ||
-      !formData.gender ||
-      !formData.address
-    ) {
-      alert(
-        "Please fill all required fields (Name, Email, Phone, DOB, Gender, Address).",
-      );
-      setIsSubmitting(false);
-      return;
-    }
+    // append scalar fields only
+    const scalarKeys = [
+      "fullName",
+      "email",
+      "phoneNumber",
+      "gender",
+      "dob",
+      "address",
+      "description",
+      "showPhonePublic",
+      "showAgePublic",
+      "showAddressPublic",
+    ];
 
-    // ✅ Phone validation: max 12 digits
-    if (
-      String(formData.phoneNumber).replace(/\D/g, "").length > MAX_PHONE_DIGITS
-    ) {
-      alert("Phone number should not exceed 12 digits.");
-      setIsSubmitting(false);
-      return;
-    }
-
-    try {
-      const data = new FormData();
-      Object.entries(formData).forEach(([key, val]) => {
-        if (key === "image") {
-          // Check if image is a file (blob) before appending, or if it's new
-          if (val instanceof Blob || val instanceof File) {
-            data.append("image", val);
-          }
-        } else if (val !== undefined && val !== null && val !== "") {
-          if (key === "professions" || key === "specializations") {
-            // Arrays are handled separately below to ensure correct format if needed,
-            // but formData already has them as arrays.
-            // We need to match updateProfile logic which stringifies them.
-            // However, looking at updateProfile, it appends them as JSON strings.
-            // Let's check how the backend expects them for creating/updating.
-            // updateProfile does: data.append("professions", JSON.stringify(cleanProfessions));
-            // standard append handles string conversion, but we probably want JSON.stringify for arrays.
-            // Actually, we should probably skip appending them here in the loop
-            // and handle them explicitly like in updateProfile helper if we want consistency.
-            // But let's check the existing code. `updateProfile` helper handles it.
-            // Here we are manually building FormData.
-            // We should use JSON.stringify for these arrays.
-          } else {
-            data.append(key, val);
-          }
-        }
-      });
-
-      // Explicitly append arrays as JSON strings
-      data.append("professions", JSON.stringify(formData.professions));
-      data.append("specializations", JSON.stringify(formData.specializations));
-
-      // Debugging: Log what's being sent
-      console.log("📤 Submitting Profile Update:");
-      for (let [key, value] of data.entries()) {
-        console.log(`${key}:`, value);
+    scalarKeys.forEach((k) => {
+      const val = formData[k];
+      if (val !== undefined && val !== null && val !== "") {
+        data.append(k, val);
       }
+    });
 
-      if (!isCreating) {
-        const cleanProfessions =
-          base.professions?.map((p) => (typeof p === "object" ? p.name : p)) ||
-          [];
-        const cleanSpecializations =
-          base.specializations?.map((s) =>
-            typeof s === "object" ? s.name : s,
-          ) || [];
-        const cleanVideoLinks =
-          base.videoLinks?.map((v) =>
-            typeof v === "object" ? v.link || v.url : v,
-          ) || [];
-        const cleanGallery =
-          base.galleryImages?.map((img) =>
-            typeof img === "object" ? img.url || img.link : img,
-          ) || [];
+    // image
+    if (formData.image instanceof Blob || formData.image instanceof File) {
+      data.append("image", formData.image);
+    }
 
-        data.append("professions", JSON.stringify(cleanProfessions));
-        data.append("specializations", JSON.stringify(cleanSpecializations));
-        data.append("videoLinks", JSON.stringify(cleanVideoLinks));
-        data.append("existingGalleryImages", JSON.stringify(cleanGallery));
-      }
+    // arrays - normalize + stringify ONCE
+    const profs = normalizeStringListDeep(formData.professions);
+    const specs = normalizeStringListDeep(formData.specializations);
 
-      let res;
-      if (isCreating) {
-        res = await api.post("/api/artist/addArtist", data, {
+    data.append("professions", JSON.stringify(profs));
+    data.append("specializations", JSON.stringify(specs));
+
+    // IMPORTANT: remove the block that appends base.professions again
+
+    const res = isCreating
+      ? await api.post("/api/artist/addArtist", data, {
+          headers: { "Content-Type": "multipart/form-data" },
+        })
+      : await api.put("/api/artist/updateMyProfile", data, {
           headers: { "Content-Type": "multipart/form-data" },
         });
-      } else {
-        res = await api.put("/api/artist/updateMyProfile", data, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
-      }
 
-      onUpdate(res.data.data);
-      onClose();
-    } catch (error) {
-      console.error("Save error", error);
-      alert(error.response?.data?.message || "Failed to save profile");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
+    onUpdate(res.data.data);
+    onClose();
+  } catch (error) {
+    console.error("Save error", error);
+    alert(error.response?.data?.message || "Failed to save profile");
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex justify-center items-center p-4 animate-in fade-in duration-200">
@@ -1893,39 +1879,23 @@ export const EditProfileModal = ({
                     <span className="text-xs text-gray-500">
                       Would you like to show your phone number publicly?
                     </span>
-                    <div className="flex items-center gap-3">
-                      <label className="flex items-center gap-1.5 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="showPhonePublic"
-                          checked={formData.showPhonePublic === true}
-                          onChange={() =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              showPhonePublic: true,
-                            }))
-                          }
-                          className="text-[#891737] focus:ring-[#891737]"
-                        />
-                        <span className="text-xs text-gray-700">Yes</span>
-                      </label>
-
-                      <label className="flex items-center gap-1.5 cursor-pointer">
-                        <input
-                          type="radio"
-                          name="showPhonePublic"
-                          checked={formData.showPhonePublic === false}
-                          onChange={() =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              showPhonePublic: false,
-                            }))
-                          }
-                          className="text-[#891737] focus:ring-[#891737]"
-                        />
-                        <span className="text-xs text-gray-700">No</span>
-                      </label>
-                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.showPhonePublic}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            showPhonePublic: e.target.checked,
+                          }))
+                        }
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                      <span className="ml-3 text-sm font-medium text-gray-900">
+                        {formData.showPhonePublic ? "Yes" : "No"}
+                      </span>
+                    </label>
                   </div>
                 </div>
 
@@ -1956,8 +1926,31 @@ export const EditProfileModal = ({
                   </div>
 
                   <p className="text-[11px] text-gray-500 mt-1">
-                    Minimum age: 8 years
+                    Minimum age: 0 years
                   </p>
+
+                  <div className="mt-2 flex items-center gap-4">
+                    <span className="text-xs text-gray-500">
+                      Would you like to show your age publicly?
+                    </span>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.showAgePublic}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            showAgePublic: e.target.checked,
+                          }))
+                        }
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                      <span className="ml-3 text-sm font-medium text-gray-900">
+                        {formData.showAgePublic ? "Yes" : "No"}
+                      </span>
+                    </label>
+                  </div>
                 </div>
 
                 <div>
@@ -2176,6 +2169,29 @@ export const EditProfileModal = ({
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm outline-none focus:border-[#891737]"
                     placeholder="Full Address with Pin Code"
                   />
+
+                  <div className="mt-2 flex items-center gap-4">
+                    <span className="text-xs text-gray-500">
+                      Would you like to show your address publicly?
+                    </span>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={formData.showAddressPublic}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            showAddressPublic: e.target.checked,
+                          }))
+                        }
+                        className="sr-only peer"
+                      />
+                      <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                      <span className="ml-3 text-sm font-medium text-gray-900">
+                        {formData.showAddressPublic ? "Yes" : "No"}
+                      </span>
+                    </label>
+                  </div>
                 </div>
               </div>
             </div>

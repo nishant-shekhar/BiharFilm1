@@ -17,12 +17,12 @@ import {
   FaLinkedinIn,
   FaImdb,
 } from "react-icons/fa";
+import { PlayCircle } from "lucide-react";
 import api from "../Components/axios";
 import {
   AboutMeCard,
   ExperienceCard,
   GalleryCard,
-  VideoLinksCard,
   BioDataCard,
   SocialMediaCard,
 } from "../Dashboard/ArtistProfileComponents";
@@ -35,7 +35,8 @@ const Disclaimer = () => (
           Disclaimer:
         </span>
         The information and data displayed on this portal are provided solely by
-        the respective individuals/applicants . The Department makes no representations or
+        the respective individuals/applicants and have not been independently
+        verified by the Department. The Department makes no representations or
         warranties regarding the accuracy, completeness, or reliability of the
         submitted information and shall not be held responsible or liable for
         any errors, omissions, or claims arising from its use.
@@ -86,10 +87,12 @@ const LocalArtist = ({ onClose }) => {
         let combinedArtists = [];
 
         if (allArtistsRes.data.success) {
+          console.log('All Artists API response:', allArtistsRes.data.data);
           combinedArtists = [...allArtistsRes.data.data];
         }
 
         if (verifiedArtistsRes.data.success) {
+          console.log('Verified Artists API response:', verifiedArtistsRes.data.data);
           // Normalize verified artists to match structure if needed, then merge
           const verifiedData = verifiedArtistsRes.data.data.map((artist) => ({
             ...artist,
@@ -186,6 +189,134 @@ const LocalArtist = ({ onClose }) => {
       age--;
     }
     return age + " Years";
+  };
+
+  // Extract video ID from various video URL formats
+  const getVideoId = (url) => {
+    if (!url || typeof url !== 'string') return null;
+    url = url.trim();
+    
+    // YouTube - more flexible matching
+    const youtubeRegex = /(?:https?:\/\/)?(?:www\.)?(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]+)/;
+    const youtubeMatch = url.match(youtubeRegex);
+    if (youtubeMatch && youtubeMatch[1]) return { type: 'youtube', id: youtubeMatch[1] };
+    
+    // Vimeo - more flexible matching
+    const vimeoRegex = /(?:https?:\/\/)?(?:www\.)?vimeo\.com\/(\d+)/;
+    const vimeoMatch = url.match(vimeoRegex);
+    if (vimeoMatch && vimeoMatch[1]) return { type: 'vimeo', id: vimeoMatch[1] };
+    
+    return null;
+  };
+
+  // Get thumbnail URL for video
+  const getThumbnailUrl = (videoInfo) => {
+    if (!videoInfo) return null;
+    if (videoInfo.type === 'youtube') {
+      return `https://img.youtube.com/vi/${videoInfo.id}/maxresdefault.jpg`;
+    }
+    if (videoInfo.type === 'vimeo') {
+      return `https://vumbnail.com/${videoInfo.id}.jpg`;
+    }
+    return null;
+  };
+
+  // Get embeddable URL for video
+  const getVideoEmbedUrl = (videoInfo, videoUrl) => {
+    if (!videoInfo) return null;
+    if (videoInfo.type === 'youtube') {
+      return `https://www.youtube.com/embed/${videoInfo.id}`;
+    }
+    if (videoInfo.type === 'vimeo') {
+      return `https://player.vimeo.com/video/${videoInfo.id}`;
+    }
+    return null;
+  };
+
+  // Custom Video Showreels Card Component
+  const VideoShowreelsCard = ({ artist, readOnly = false }) => {
+    // Parse videoLinks/videos - handle both array and string formats
+    // Check for both 'videoLinks' and 'videos' field names
+    let videoData = artist.videoLinks || artist.videos || [];
+    if (typeof videoData === 'string') {
+      try {
+        videoData = JSON.parse(videoData);
+      } catch (e) {
+        videoData = [];
+      }
+    }
+
+    // Filter and normalize valid video URLs
+    const validVideos = videoData
+      .filter(item => {
+        if (typeof item === 'string') {
+          return item.trim().length > 0;
+        } else if (typeof item === 'object' && item.url) {
+          return item.url.trim().length > 0;
+        }
+        return false;
+      })
+      .map(item => typeof item === 'string' ? item : item.url);
+
+    if (validVideos.length === 0) {
+      return (
+        <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+          <h3 className="text-sm font-bold text-gray-900 mb-4">Video Showreels</h3>
+          <p className="text-xs text-gray-400 italic">No videos added.</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm">
+        <h3 className="text-sm font-bold text-gray-900 mb-4">Video Showreels</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {validVideos.map((url, i) => {
+            const videoInfo = getVideoId(url);
+            const thumbnail = getThumbnailUrl(videoInfo);
+            return (
+              <a
+                key={i}
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group block overflow-hidden rounded-xl border border-gray-100 hover:border-[#891737]/30 transition-all hover:shadow-md"
+              >
+                <div className="relative w-full h-48 bg-gray-100">
+                  {thumbnail ? (
+                    <img
+                      src={thumbnail}
+                      alt={`Video ${i + 1} thumbnail`}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        // Fallback to default thumbnail if image fails to load
+                        e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHBhdGggZD0iTTEyIDJDMTMuMSAyIDE0IDIuOSAxNCA0VjE2QzE0IDE3LjEgMTMuMSAxOCA5IDE4QzQuOSAxOCA0IDE3LjEgNCAxNlY0QzQgMi45IDQuOSAyIDYgMkg5QzEwLjEgMiAxMSAyLjkgMTEgNFY2SDR2MTBjMCAuNTUuMiAxIC41IDEuNWwxIDFoN2wxLTEgVjYuNVoiIGZpbGw9IiM5Q0E0QUYiLz4KPC9zdmc+';
+                      }}
+                    />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                      <PlayCircle className="w-12 h-12 text-gray-400" />
+                    </div>
+                  )}
+                  {/* Play overlay */}
+                  <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <PlayCircle className="w-16 h-16 text-white drop-shadow-lg" />
+                  </div>
+                </div>
+                <div className="p-3 bg-white">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">
+                    Video {i + 1}
+                  </p>
+                  <p className="text-sm font-medium text-gray-700 truncate mt-1">
+                    {videoInfo ? `${videoInfo.type} Video` : 'Untitled Video'}
+                  </p>
+                </div>
+              </a>
+            );
+          })}
+        </div>
+      </div>
+    );
   };
 
   const filtered = artists.filter((a) => {
@@ -540,7 +671,9 @@ const LocalArtist = ({ onClose }) => {
                       Phone
                     </p>
                     <p className="font-semibold text-gray-900 text-sm">
-                      {focusedArtist.phoneNumber || "N/A"}
+                      {focusedArtist.showPhonePublic === false
+                        ? "NA"
+                        : focusedArtist.phoneNumber || "N/A"}
                     </p>
                   </div>
                   <div className="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
@@ -556,7 +689,9 @@ const LocalArtist = ({ onClose }) => {
                       Age
                     </p>
                     <p className="font-semibold text-gray-900 text-sm">
-                      {calculateAge(focusedArtist.dob)}
+                      {focusedArtist.showDobPublic === false
+                        ? "NA"
+                        : calculateAge(focusedArtist.dob)}
                     </p>
                   </div>
                 </div>
@@ -567,12 +702,17 @@ const LocalArtist = ({ onClose }) => {
                   <div className="xl:col-span-8 space-y-6">
                     <AboutMeCard artist={focusedArtist} readOnly={true} />
                     <ExperienceCard artist={focusedArtist} readOnly={true} />
-                    <GalleryCard artist={focusedArtist} readOnly={true} />
+<GalleryCard
+  artist={{
+    ...focusedArtist,
+    galleryImages: focusedArtist.galleryImages ?? focusedArtist.images ?? [],
+  }}
+  readOnly={true}
+/>                    <VideoShowreelsCard artist={focusedArtist} readOnly={true} />
                   </div>
 
                   {/* Sidebar Info Column */}
                   <div className="xl:col-span-4 space-y-6">
-                    <VideoLinksCard artist={focusedArtist} readOnly={true} />
                     <BioDataCard artist={focusedArtist} readOnly={true} />
                     <SocialMediaCard artist={focusedArtist} readOnly={true} />
                   </div>

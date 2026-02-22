@@ -560,7 +560,7 @@ const Card = ({ p }) => {
               href={p.productLink}
               target="_blank"
               rel="noopener noreferrer"
-              className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-[#891737] text-white text-xs font-semibold hover:opacity-95 transition"
+              className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-xs font-semibold text-gray-800 transition"
             >
               View Link <FiExternalLink className="w-4 h-4" />
             </a>
@@ -577,7 +577,7 @@ const Card = ({ p }) => {
           <button
             type="button"
             onClick={() => openVendor(p?.vendor)}
-            className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-xs font-semibold text-gray-800 transition"
+            className="flex-1 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-xl bg-[#891737] text-white text-xs font-semibold hover:opacity-95 transition"
           >
             <FiUser className="w-4 h-4 text-gray-500" />
             View Vendor
