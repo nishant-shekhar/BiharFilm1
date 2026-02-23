@@ -736,7 +736,6 @@ export const AboutMeCard = ({ artist, onUpdate, readOnly = false }) => {
   useEffect(() => {
     setFormData({
       description: artist.description || "",
-      description: artist.description || "",
     });
   }, [artist]);
 
