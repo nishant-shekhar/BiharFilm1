@@ -43,6 +43,8 @@ export const TECHNICIAN_ROLES = [
   "Costume",
   "Make-up",
   "DI Colourist",
+  "Fighter",
+  "Lyricists",
   "Others",
 ];
 
@@ -76,7 +78,7 @@ export const ROLE_SPECIALIZATIONS = {
 
   // Technician Roles
   Production: ["Line Producer", "Production Manager", "Production Assistant"],
-  Direction: ["Director", "Assistant Director", "Casting Director"],
+  Direction: ["Director", "Assistant Director", "Casting Director","Action Director",],
   Writing: [
     "Story Writer",
     "Screenplay Writer",
@@ -88,6 +90,9 @@ export const ROLE_SPECIALIZATIONS = {
     "Camera Assistant",
     "Lighting Assistant",
     "Light Man",
+    "Still Photographer",
+    "BTS Maker",
+    "Spot Boys"
   ],
   Sound: [
     "Sound Designer",
@@ -95,15 +100,18 @@ export const ROLE_SPECIALIZATIONS = {
     "Effects & Foley Artist",
     "Sound Mixing Master (RR)",
   ],
-  Editing: ["Editor", "Editing Assistant"],
+  Editing: ["Editor", "Editing Assistant","Animation-Graphics & Spl. Effects Artists",],
   "Production Designing": [
     "Production Designer",
     "Art Director",
     "Art Director Assistant",
+    
   ],
   Costume: ["Costume Designer", "Dress Man"],
   "Make-up": ["Make Up Man", "Make Up Assistant", "Hair Stylist", "Wig Maker"],
-  "DI Colourist": [], // No specific specs provided, fallback to Others
+  Fighter: ["Fighter"],
+  Lyricists: ["Lyricists"],
+  "DI Colourist": ["DI Colourist"], // No specific specs provided, fallback to Others
   Others: [],
 };
 

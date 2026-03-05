@@ -433,5 +433,71 @@
                 "name": "Music Licensing"
             }
         ]
+    },
+    {
+        "name": "Studios",
+        "subcategories": [
+           
+            {
+                "name": "Shooting Studios"
+            },
+            {
+                "name": "Sound Studios"
+            },
+             {
+                "name": "Edit Studios"
+            },
+            {
+                "name": "Animation & Graphics Studio"
+            }
+        ]
+    },
+     {
+        "name": "Suppliers",
+        "subcategories": [
+           
+            {
+                "name": "Costume Supplier"
+            },
+            {
+                "name": "Prop Suppliers"
+            },
+             {
+                "name": "Food Supplier"
+            }
+        ]
+    },
+    {
+        "name": "Provider",
+        "subcategories": [
+           
+            {
+                "name": "Hotel & Hospitality Provier"
+            },
+            {
+                "name": "Houses for Shooting Providers"
+            },
+            {
+                "name": "Transport Provider"
+            },
+            {
+                "name": "Logistics Providers"
+            }
+        ]
+    },
+     {
+        "name": "Services",
+        "subcategories": [
+           
+            {
+                "name": "Generator Services"
+            },
+            {
+                "name": "Security Services"
+            },
+            {
+                "name": "Travel Agent Services"
+            }
+        ]
     }
 ]
