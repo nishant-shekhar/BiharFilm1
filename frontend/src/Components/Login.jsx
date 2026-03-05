@@ -7,12 +7,15 @@ import { MdEmail } from "react-icons/md";
 import { IoIosLock } from "react-icons/io";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { FaArrowLeftLong } from "react-icons/fa6";
+import FaqModal from "../Cards/Faq";
 
 const LoginPage = () => {
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showFaq, setShowFaq] = useState(false);
+
 
   const handleLogin = async (e) => {
     e.preventDefault(); // ✅ Prevent default form submission
@@ -127,22 +130,20 @@ const LoginPage = () => {
               <button
                 type="button"
                 onClick={() => setIsAdmin(false)}
-                className={`px-6 py-2 rounded-full border text-sm font-medium transition ${
-                  !isAdmin
+                className={`px-6 py-2 rounded-full border text-sm font-medium transition ${!isAdmin
                     ? "border-[#a92b43] text-[#a92b43]"
                     : "border-gray-300 text-gray-600"
-                }`}
+                  }`}
               >
                 User
               </button>
               <button
                 type="button"
                 onClick={() => setIsAdmin(true)}
-                className={`px-6 py-2 rounded-full border text-sm font-medium transition ${
-                  isAdmin
+                className={`px-6 py-2 rounded-full border text-sm font-medium transition ${isAdmin
                     ? "border-[#a92b43] text-[#a92b43]"
                     : "border-gray-300 text-gray-600"
-                }`}
+                  }`}
               >
                 Admin
               </button>
@@ -215,9 +216,8 @@ const LoginPage = () => {
             <button
               type="submit"
               disabled={loading}
-              className={`mb-6 w-full rounded-full bg-[#a92b43] py-2 shadow-[0_4px_8px_#802d44] font-semibold text-white hover:bg-[#891737] active:scale-95 transition-transform duration-150 flex justify-center items-center ${
-                loading ? "opacity-70 cursor-not-allowed" : ""
-              }`}
+              className={`mb-6 w-full rounded-full bg-[#a92b43] py-2 shadow-[0_4px_8px_#802d44] font-semibold text-white hover:bg-[#891737] active:scale-95 transition-transform duration-150 flex justify-center items-center ${loading ? "opacity-70 cursor-not-allowed" : ""
+                }`}
             >
               {loading ? (
                 <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
@@ -225,13 +225,24 @@ const LoginPage = () => {
                 "Login"
               )}
             </button>
-
-            <p className="text-center text-sm text-gray-600">
-              Don't have an account?{" "}
-              <Link to="/signup" className="text-[#a92b43] hover:underline">
-                Sign up
-              </Link>
-            </p>
+            <div className="flex items-center mb-4 justify-center gap-2">
+              <p className="text-center text-sm text-gray-600">
+                Don't have an account?{" "}
+                <Link to="/signup" className="text-[#a92b43] hover:underline">
+                  Sign up
+                </Link>
+              </p>
+             
+            </div>
+            <div className="flex items-center justify-center">
+             <button
+                type="button"
+                onClick={() => setShowFaq(true)}
+                className="text-xs font-semibold text-gray-500 hover:text-[#a92b43] underline underline-offset-4"
+              >
+                FAQ
+              </button>
+              </div>
             {/* <div className="mt-4 text-center">
               <Link
                 to="/NOCguide"
@@ -246,6 +257,8 @@ const LoginPage = () => {
           </form>
         </div>
       </div>
+      <FaqModal isOpen={showFaq} onClose={() => setShowFaq(false)} />
+
     </div>
   );
 };

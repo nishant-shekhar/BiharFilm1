@@ -5,16 +5,19 @@ import Adminsvgg from "../assets/adminsvgg.svg";
 import Logo from "/Logo1.png";
 import { MdEmail, MdCheckCircle, MdCancel } from "react-icons/md";
 import { IoIosLock } from "react-icons/io";
-import { FaUser, FaEye, FaEyeSlash, FaInfoCircle } from "react-icons/fa"; // Added FaInfoCircle
+import { FaUser, FaEye, FaEyeSlash, FaInfoCircle,FaQuestionCircle } from "react-icons/fa"; // Added FaInfoCircle
 import { IoClose } from "react-icons/io5"; // Added IoClose for modal
 import api from "./axios"; // ✅ Import api instance
 import AlertBox from "./AlertBox"; // Import AlertBox
+import FaqModal from "../Cards/Faq";
 
 const SignupPage = () => {
   const navigate = useNavigate();
   const [selectedRole, setSelectedRole] = useState("");
   const [loading, setLoading] = useState(false);
   const [showInfoPopup, setShowInfoPopup] = useState(false); // State for info popup
+
+  const [showFaq, setShowFaq] = useState(false);
 
   // AlertBox State
   const [alertState, setAlertState] = useState({
@@ -241,15 +244,28 @@ const SignupPage = () => {
           {/* Sticky Header (Logo + Title + Help) */}
           <div className="sticky top-0 z-20 bg-white/95 backdrop-blur border-b border-gray-100 px-6 md:px-8 lg:px-12 pt-6 pb-4">
             {/* Top Right Help Button */}
-            <button
-              onClick={() => setShowInfoPopup(true)}
-              className="absolute top-6 right-6 p-2 text-gray-500 hover:text-[#a92b43] bg-gray-100 hover:bg-[#a92b43]/10 rounded-full transition-all duration-300"
-              title="Registration Information"
-              type="button"
-            >
-              <FaInfoCircle size={18} />
-            </button>
+        
+<div className="absolute top-6 right-6 flex items-center gap-2">
+  {/* FAQ */}
+  <button
+    onClick={() => setShowFaq(true)}
+    className="p-2 text-gray-500 hover:text-[#a92b43] bg-gray-100 hover:bg-[#a92b43]/10 rounded-full transition-all duration-300"
+    title="FAQs"
+    type="button"
+  >
+    <FaQuestionCircle size={18} />
+  </button>
 
+  {/* Registration Info */}
+  <button
+    onClick={() => setShowInfoPopup(true)}
+    className="p-2 text-gray-500 hover:text-[#a92b43] bg-gray-100 hover:bg-[#a92b43]/10 rounded-full transition-all duration-300"
+    title="Registration Information"
+    type="button"
+  >
+    <FaInfoCircle size={18} />
+  </button>
+</div>
             {/* Logo */}
             <div className="flex justify-center">
               <img src={Logo} alt="Logo" className="w-24 object-contain" />
@@ -282,6 +298,8 @@ const SignupPage = () => {
                     </span>
                     Info
                   </button>
+                  {/* Top Right Help Buttons */}
+
                 </div>
 
                 <div className="grid grid-cols-3 gap-3 mb-6">
@@ -691,6 +709,7 @@ const SignupPage = () => {
         confirmText={alertState.confirmText}
         onConfirm={alertState.onConfirm}
       />
+      <FaqModal isOpen={showFaq} onClose={() => setShowFaq(false)} />
     </div>
   );
 };
